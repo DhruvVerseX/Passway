@@ -1,0 +1,131 @@
+# Passway — project brief
+
+## What this is
+
+Passway is a SaaS product for secure credential handoff. The core use
+case: a developer wants to share a codebase with a contractor,
+collaborator, or interview candidate without handing over real API
+keys or production credentials. Instead of pasting a `.env` file into
+Slack or committing a shared master key, they issue a scoped, revocable
+token through Passway. The consuming app calls Passway's API at runtime
+to fetch the secret it needs — the fetch itself is logged, and access
+can be revoked instantly without redeploying anything.
+
+This is a real product I intend to launch, not a coursework exercise —
+treat gaps as things to fix, not things to leave as "good enough for a demo."
+
+## The core architectural decision (don't relitigate this)
+
+An earlier version of this idea tried to ship a bundled decryption
+algorithm with the consuming app so it could decrypt secrets locally,
+with no network call back to the platform. That's broken: anything
+that can decrypt itself alone, without checking in anywhere, can be
+reverse-engineered by whoever runs the app. There is no version of
+"local decryption, no request to the server" that is actually secure.
+
+The corrected model, which is what's implemented and what any new work
+should follow:
+
+```
+consuming app --(HTTPS + bearer token)--> Passway API
+                                              |
+                                    validate token (hash, revoked?, expired?)
+                                              |
+                                    decrypt secret server-side
+                                              |
+                                    log the attempt (allowed or denied)
+                                              |
+                                    return plaintext over TLS
+```
+
+The network request is not a limitation to work around — it's the
+security boundary and the source of the audit log, which is a real
+product feature, not an afterthought.
+
+## Current state of the code
+
+Two separate pieces exist. **They are not yet connected to each other.**
+
+### `passway-api/` — backend, Express + TypeScript, functional and tested
+
+- Envelope encryption: each secret gets its own AES-256-GCM data key,
+  which is itself wrapped by a master key through a `Kms` interface
+  (`src/crypto/kms.ts`, `src/crypto/envelope.ts`). The `Kms` interface
+  is deliberately swappable — `LocalKms` (env-var master key) is a
+  stand-in for AWS KMS / GCP KMS / Vault's transit engine later.
+- Tokens (`src/crypto/tokens.ts`): 256-bit random, `psw_live_` prefixed,
+  only the SHA-256 hash is ever stored.
+- Auth middleware (`src/middleware/auth.ts`) checks token existence,
+  revocation, and expiry on every request to the runtime fetch endpoint.
+- Separate, weaker admin auth (`src/middleware/adminAuth.ts`) — a single
+  shared static key from an env var, used by dashboard-facing routes.
+  **Explicitly a placeholder** — needs real session auth before more
+  than one person uses the dashboard.
+- Storage (`src/store/db.ts`) is a flat JSON file on disk. **Explicitly
+  a placeholder** for Postgres — no transactions, no concurrent-write
+  safety.
+- Routes: `src/routes/secrets.ts` (admin CRUD + the real runtime fetch
+  endpoint `GET /v1/secrets/:key`), `tokens.ts` (issue/list/revoke),
+  `audit.ts` (read the log).
+- I've run this end-to-end manually: issued a token, stored a secret,
+  fetched it successfully, confirmed a bad token gets 401, confirmed
+  both allowed and denied fetches appear in the audit log.
+
+### Frontend — Next.js App Router, TypeScript/TSX, design-only
+
+- Landing page (`app/page.tsx`) and dashboard routes
+  (`app/dashboard/secrets|tokens|audit|settings/page.tsx`) with a
+  shared sidebar layout that highlights the active route.
+- `RevealSecret` is the one component with real client-side state
+  (click to reveal a masked value). Everything else is static markup.
+- **All data is hardcoded** (`SECRETS`, `TOKENS`, `EVENTS` arrays
+  inline in each page). Nothing here calls `passway-api` yet.
+- **Still named "Conduit" throughout** — logo, copy, code comments.
+  This predates the name being finalized as Passway and needs a
+  find-and-replace pass across the whole frontend (and check the
+  backend for any leftover references too).
+
+## What's explicitly NOT done yet
+
+- Frontend and backend are not wired together. Dashboard buttons
+  ("Add secret," "Issue token," "Revoke") are dead links.
+- No real user login/session anywhere — just the shared admin key.
+- No Postgres — just the JSON file.
+- No real npm SDK — `@conduit/sdk` in the landing page code sample is
+  illustrative copy, not a published package.
+- Nothing is deployed anywhere.
+- Naming: "Conduit" needs to become "Passway" everywhere (see above).
+
+## Domain and naming
+
+Product name is **Passway**. Domain `passway.co.in` is owned and live.
+Do not reintroduce "Conduit" in new code — it's a leftover placeholder
+name from before Passway was chosen.
+
+## Suggested next steps, in order
+
+1. Rename Conduit → Passway across the frontend (and audit the backend
+   for stray references) before adding new features on top of it.
+2. Wire the Next.js dashboard to `passway-api`'s `/v1/admin/*` routes —
+   via server actions or route handlers, never calling the admin API
+   directly from the browser (that would leak the admin key to the client).
+3. Replace the shared static admin key with real session auth.
+4. Replace the JSON file store with Postgres (Prisma is a reasonable
+   default given the Next.js/TypeScript stack already in use).
+5. Only after the above: real KMS integration, rate limiting, TLS
+   termination in front of the API, then self-serve signup/billing.
+
+Don't jump to hardening or self-serve features before steps 2–4 are
+solid — that's building new surface area on top of a single shared
+key and a file-based store, which just means redoing it later with
+real user data at stake.
+
+## How I want you to work with me
+
+- I want to understand code written for me, not just receive it —
+  explain non-trivial implementations, don't just hand me a diff.
+- Flag problems directly rather than defaulting to agreement. I'd
+  rather hear "this is broken" early than find out later.
+- Don't roll custom cryptography or invent a bespoke auth scheme —
+  use standard library crypto and well-known patterns (this project
+  already deliberately avoided a homemade-algorithm approach once).
