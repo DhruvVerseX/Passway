@@ -9,10 +9,10 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "dev:api": "tsx watch src/index.ts",
-    "dev:web": "npm run dev --workspace @passway/web",
-    "dev:app": "npm run dev --workspace @passway/app",
-    "dev:docs": "npm run dev --workspace @passway/docs",
-    "build:frontends": "npm run build --workspaces --if-present",
+    "dev:web": "bun --cwd apps/web run dev",
+    "dev:app": "bun --cwd apps/app run dev",
+    "dev:docs": "bun --cwd apps/docs run dev",
+    "build:frontends": "bun --cwd apps/web run build && bun --cwd apps/app run build && bun --cwd apps/docs run build",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },

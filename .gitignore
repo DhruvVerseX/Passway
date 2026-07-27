@@ -3,3 +3,5 @@ data/
 .env
 dist/
 backend.log
+apps/*/.next/
+apps/*/tsconfig.tsbuildinfo
