@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
+export default function AuthLayout({children}:Readonly<{children:React.ReactNode}>){return <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,.14),transparent_30rem)] px-5 py-12"><div className="w-full max-w-sm"><Link href="/login" className="mb-8 flex items-center justify-center gap-2 font-semibold"><ShieldCheck className="text-blue-400"/>Passway EnvVault</Link>{children}<p className="mt-6 text-center text-xs leading-5 text-[#8B949E]">Frontend preview only. Authentication is not connected.</p></div></main>;}

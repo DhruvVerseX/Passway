@@ -1,0 +1,5 @@
+import type { ReactNode } from "react";
+export function Doc({eyebrow,title,description,children}:{eyebrow:string;title:string;description:string;children:ReactNode}){return <article className="max-w-3xl"><p className="mono text-xs text-blue-400">{eyebrow}</p><h1 className="mt-3 text-4xl font-semibold tracking-tight">{title}</h1><p className="mt-5 text-lg leading-8 text-[#8B949E]">{description}</p><div className="mt-10 space-y-9 text-[15px] leading-7">{children}</div></article>;}
+export function Section({title,children}:{title:string;children:ReactNode}){return <section><h2 className="mb-3 text-xl font-semibold">{title}</h2><div className="text-[#B7C0CA]">{children}</div></section>;}
+export function Code({children}:{children:string}){return <pre className="mt-4 overflow-x-auto rounded-xl border border-[#1D2633] bg-[#0B0F14] p-5 text-sm leading-7 text-blue-300"><code>{children}</code></pre>;}
+export function Note({children}:{children:ReactNode}){return <div className="rounded-xl border border-blue-500/25 bg-blue-500/[.06] p-4 text-sm text-blue-200">{children}</div>;}

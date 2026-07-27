@@ -3,8 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:api": "tsx watch src/index.ts",
+    "dev:web": "npm run dev --workspace @passway/web",
+    "dev:app": "npm run dev --workspace @passway/app",
+    "dev:docs": "npm run dev --workspace @passway/docs",
+    "build:frontends": "npm run build --workspaces --if-present",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
