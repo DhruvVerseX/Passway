@@ -1,2 +1,2 @@
-import { Code, Doc, Section } from "@/components/doc";
+import { Code, Doc, Section } from "../../components/doc";
 export default function NodeSdk(){return <Doc eyebrow="SDK / NODE.JS" title="Node.js SDK" description="Load secrets before importing modules that read from process.env."><Section title="Basic usage"><Code>{`import { loadEnv } from "@passway/envvault";\n\nawait loadEnv();\n\nconst databaseUrl = process.env.DATABASE_URL;`}</Code></Section><Section title="Startup order"><p>Call <code className="rounded bg-[#0B0F14] px-1.5 py-1 text-blue-300">loadEnv()</code> in the earliest application entrypoint. Modules initialized before it resolves will not see injected values.</p></Section></Doc>;}

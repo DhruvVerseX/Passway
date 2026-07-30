@@ -6,10 +6,9 @@ It is designed to help teams keep sensitive configuration out of source code, re
 
 ## Structure
 
-- `src` â€” existing Express API (`api.passway.co.in`)
-- `apps/web` â€” marketing site (`passway.co.in`)
-- `apps/dashboard` â€” dashboard (`app.passway.co.in`)
-- `apps/docs` â€” SDK docs (`docs.passway.co.in`)
+- `apps/api` — Express API (`api.passway.co.in`)
+- `apps/web` — marketing site and docs (`passway.co.in`, `/docs`)
+- `apps/dashboard` — dashboard (`app.passway.co.in`)
 
 ## Local Development
 
@@ -21,13 +20,12 @@ cp .env.example .env
 Run each surface in a separate terminal:
 
 ```bash
-bun run dev:api   # http://localhost:4000
-bun run dev:web   # http://localhost:3000
-bun run dev:dashboard # http://localhost:3001
-bun run dev:docs  # http://localhost:3002
+bun run dev:api        # http://localhost:4000
+bun run dev:web        # http://localhost:3000
+bun run dev:dashboard  # http://localhost:3001
 ```
 
-Build all frontends with `bun run build:frontends`.
+Build frontends with `bun run build:frontends`.
 
 The frontends currently use mock data only. Authentication and API integration
 are intentionally not connected. The existing API source and storage behavior

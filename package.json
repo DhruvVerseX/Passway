@@ -11,8 +11,7 @@
     "dev:api": "bun run --cwd apps/api dev",
     "dev:web": "bun run --cwd apps/web dev",
     "dev:dashboard": "bun run --cwd apps/dashboard dev",
-    "dev:docs": "bun run --cwd apps/docs dev",
-    "build:frontends": "bun run --cwd apps/web build && bun run --cwd apps/dashboard build && bun run --cwd apps/docs build",
+    "build:frontends": "bun run --cwd apps/web build && bun run --cwd apps/dashboard build",
     "start": "bun run --cwd apps/api start",
     "typecheck": "bun run --cwd apps/api typecheck"
   }
