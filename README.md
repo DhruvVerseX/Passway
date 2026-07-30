@@ -17,7 +17,13 @@ bun install
 cp .env.example .env
 ```
 
-Run each surface in a separate terminal:
+Start all services from the repo root:
+
+```bash
+bun dev
+```
+
+Or run each surface separately:
 
 ```bash
 bun run dev:api        # http://localhost:4000

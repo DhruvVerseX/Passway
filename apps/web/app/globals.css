@@ -27,3 +27,74 @@ button, input { font: inherit; }
   background-image: linear-gradient(rgba(29,38,51,.26) 1px, transparent 1px), linear-gradient(90deg, rgba(29,38,51,.26) 1px, transparent 1px);
   background-size: 52px 52px;
 }
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(circle at 50% 28%, black, transparent 72%);
+}
+
+.reveal {
+  animation: reveal-up .7s ease both;
+}
+
+.reveal-1 { animation-delay: .04s; }
+.reveal-2 { animation-delay: .12s; }
+.reveal-3 { animation-delay: .20s; }
+.reveal-4 { animation-delay: .28s; }
+.reveal-5 { animation-delay: .36s; }
+
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: #b9f55d;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.section-kicker::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #b9f55d;
+  box-shadow: 0 0 20px rgba(185,245,93,.35);
+}
+
+.section-title {
+  max-width: 760px;
+  color: #f6f7f4;
+  font-size: clamp(2.25rem, 5vw, 4.25rem);
+  line-height: 1.02;
+  font-weight: 650;
+  letter-spacing: -0.05em;
+}
+
+.section-copy {
+  max-width: 620px;
+  color: rgba(255,255,255,.42);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}

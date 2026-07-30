@@ -7,7 +7,8 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun run dev:api",
+    "dev": "node scripts/dev-all.mjs",
+    "dev:all": "node scripts/dev-all.mjs",
     "dev:api": "bun run --cwd apps/api dev",
     "dev:web": "bun run --cwd apps/web dev",
     "dev:dashboard": "bun run --cwd apps/dashboard dev",
