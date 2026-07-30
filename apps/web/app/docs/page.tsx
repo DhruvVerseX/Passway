@@ -59,11 +59,7 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY);`,
 };
 
 function PasswayMark() {
-  return (
-    <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#b9f55d] text-[#10130d] shadow-[0_0_24px_rgba(185,245,93,0.12)]">
-      <ShieldCheck size={17} strokeWidth={2.5} />
-    </span>
-  );
+  return <img src="/assets/logo/passway-mark-dark.svg" alt="" className="h-8 w-8 shrink-0" aria-hidden="true" />;
 }
 
 function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
@@ -163,8 +159,7 @@ export default function PasswayDocs() {
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.065] bg-[#0b0d0b]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center px-4 sm:px-6">
           <a href="/" className="flex items-center gap-2.5" aria-label="Passway home">
-            <PasswayMark />
-            <span className="text-[14px] font-semibold tracking-[-0.03em]">passway</span>
+            <img src="/assets/logo/passway-logo-dark.svg" alt="Passway" className="h-8 w-auto" />
           </a>
           <div className="mx-4 hidden h-5 w-px bg-white/[0.09] sm:block" />
           <span className="hidden text-[12px] font-medium text-white/40 sm:block">Documentation</span>

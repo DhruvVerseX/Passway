@@ -102,15 +102,7 @@ const navigation = [
 ];
 
 function PasswayMark({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`relative grid h-8 w-8 place-items-center overflow-hidden rounded-[10px] bg-[#b9f55d] text-[#10130d] shadow-[0_0_24px_rgba(185,245,93,0.16)] ${className}`}
-      aria-hidden="true"
-    >
-      <ShieldCheck size={17} strokeWidth={2.4} />
-      <span className="absolute inset-x-1 bottom-0 h-px bg-white/45" />
-    </span>
-  );
+  return <img src="/assets/logo/passway-mark-dark.svg" alt="" className={`h-8 w-8 shrink-0 ${className}`} aria-hidden="true" />;
 }
 
 function EnvironmentBadge({ environment }: { environment: Environment }) {
@@ -297,15 +289,14 @@ export default function PasswayDashboard() {
 
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-white/[0.07] bg-[#0d0f0c] transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-[68px] items-center gap-3 border-b border-white/[0.065] px-5">
-          <PasswayMark />
-          <span className="text-[15px] font-semibold tracking-[-0.025em]">passway</span>
+          <img src="/assets/logo/passway-logo-dark.svg" alt="Passway" className="h-8 w-auto" />
           <span className="rounded border border-white/[0.08] bg-white/[0.035] px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-white/35">BETA</span>
           <button className="ml-auto text-white/35 transition hover:text-white lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close navigation"><X size={18} /></button>
         </div>
 
         <div className="p-3">
           <button className="flex w-full items-center gap-2.5 rounded-xl border border-white/[0.075] bg-white/[0.025] p-2 text-left transition hover:bg-white/[0.045]">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#1e2518] text-[11px] font-semibold text-[#b9f55d]">P</span>
+            <img src="/assets/logo/passway-mark-dark.svg" alt="" className="h-7 w-7 shrink-0" aria-hidden="true" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs font-medium text-white/85">Passway Cloud</span>
               <span className="block text-[10px] text-white/30">Pro workspace</span>

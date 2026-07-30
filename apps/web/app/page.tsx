@@ -25,6 +25,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const installCommand = "bun add @passway/sdk";
@@ -100,15 +101,12 @@ const features = [
 
 function PasswayMark({ compact = false }: { compact?: boolean }) {
   return (
-    <span
-      className={`relative grid place-items-center overflow-hidden rounded-[11px] bg-[#b9f55d] text-[#10130d] shadow-[0_0_30px_rgba(185,245,93,0.14)] ${
-        compact ? "h-8 w-8" : "h-9 w-9"
-      }`}
+    <img
+      src="/assets/logo/passway-mark-dark.svg"
+      alt=""
+      className={`${compact ? "h-8 w-8" : "h-9 w-9"} shrink-0`}
       aria-hidden="true"
-    >
-      <ShieldCheck size={compact ? 17 : 19} strokeWidth={2.5} />
-      <span className="absolute inset-x-1 bottom-0 h-px bg-white/50" />
-    </span>
+    />
   );
 }
 
@@ -142,8 +140,7 @@ export default function PasswayLanding() {
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.065] bg-[#0b0d0b]/78 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-[1240px] items-center px-5 sm:px-8">
           <a href="#" className="flex items-center gap-2.5" aria-label="Passway home">
-            <PasswayMark compact />
-            <span className="text-[15px] font-semibold tracking-[-0.03em]">passway</span>
+            <img src="/assets/logo/passway-logo-dark.svg" alt="Passway" className="h-8 w-auto" />
           </a>
 
           <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex" aria-label="Primary navigation">
@@ -177,8 +174,7 @@ export default function PasswayLanding() {
       <div className={`fixed inset-0 z-[60] bg-[#0b0d0b] px-5 pt-4 transition duration-300 md:hidden ${menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}>
         <div className="flex h-12 items-center">
           <a href="#" className="flex items-center gap-2.5" onClick={() => setMenuOpen(false)}>
-            <PasswayMark compact />
-            <span className="text-[15px] font-semibold">passway</span>
+            <img src="/assets/logo/passway-logo-dark.svg" alt="Passway" className="h-8 w-auto" />
           </a>
           <button onClick={() => setMenuOpen(false)} className="ml-auto grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] text-white/60" aria-label="Close navigation">
             <X size={18} />
@@ -233,52 +229,15 @@ export default function PasswayLanding() {
             </div>
           </div>
 
-          <div className="relative mx-auto mt-16 max-w-[1080px] sm:mt-20">
+          <div className="relative mx-auto mt-16 max-w-360 sm:mt-20">
             <div className="absolute -inset-px rounded-[25px] bg-gradient-to-b from-[#b9f55d]/20 via-white/[0.04] to-transparent" />
             <div className="relative overflow-hidden rounded-3xl border border-black/40 bg-[#10130f] p-2 shadow-[0_45px_120px_rgba(0,0,0,0.55)] sm:p-3">
               <div className="overflow-hidden rounded-[17px] border border-white/[0.07] bg-[#0d0f0c]">
-                <div className="flex h-11 items-center border-b border-white/[0.065] px-4">
-                  <div className="flex gap-1.5"><span className="h-2 w-2 rounded-full bg-white/10" /><span className="h-2 w-2 rounded-full bg-white/10" /><span className="h-2 w-2 rounded-full bg-[#b9f55d]/35" /></div>
-                  <span className="mx-auto -translate-x-5 font-mono text-[9px] text-white/20">app.passway.co.in / production</span>
-                </div>
-                <div className="grid min-h-[360px] lg:grid-cols-[190px_1fr]">
-                  <aside className="hidden border-r border-white/[0.06] p-4 lg:block">
-                    <div className="flex items-center gap-2"><PasswayMark compact /><span className="text-xs font-semibold">passway</span></div>
-                    <div className="mt-8 space-y-1">
-                      {["Overview", "SDK keys", "Secrets", "Environments", "Audit log"].map((item, index) => (
-                        <div key={item} className={`flex h-8 items-center gap-2 rounded-lg px-2.5 text-[10px] ${index === 1 ? "bg-white/[0.065] text-white" : "text-white/28"}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${index === 1 ? "bg-[#b9f55d]" : "bg-white/15"}`} /> {item}
-                        </div>
-                      ))}
-                    </div>
-                  </aside>
-                  <div className="p-5 sm:p-8">
-                    <div className="flex items-start justify-between">
-                      <div><p suppressHydrationWarning className="text-[10px] text-[#b9f55d]/70">PRODUCTION</p><h2 className="mt-2 text-xl font-semibold tracking-[-0.035em]">SDK keys</h2><p suppressHydrationWarning className="mt-1 text-[11px] text-white/30">Scoped application access to encrypted secrets.</p></div>
-                      <span className="rounded-lg bg-[#b9f55d] px-3 py-2 text-[10px] font-semibold text-[#10130d]">+ Create key</span>
-                    </div>
-                    <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                      {[["Active keys", "03"], ["Requests · 24h", "468k"], ["Blocked", "12"]].map(([label, value], index) => (
-                        <div key={label} className={`rounded-xl border p-4 ${index === 0 ? "border-[#b9f55d]/16 bg-[#b9f55d]/[0.045]" : "border-white/[0.065] bg-white/[0.018]"}`}>
-                          <p suppressHydrationWarning className="text-[9px] text-white/28">{label}</p><p suppressHydrationWarning className="mt-3 text-xl font-semibold tracking-[-0.04em]">{value}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 overflow-hidden rounded-xl border border-white/[0.065]">
-                      <div className="grid grid-cols-[1fr_auto] border-b border-white/[0.055] px-4 py-2.5 text-[8px] uppercase tracking-widest text-white/20"><span>Key</span><span>Status</span></div>
-                      {[
-                        ["Production API", "pw_live_••••8F2D"],
-                        ["Vercel previews", "pw_prev_••••4AC1"],
-                        ["Local development", "pw_dev_••••91BB"],
-                      ].map(([name, key]) => (
-                        <div key={name} className="grid grid-cols-[1fr_auto] items-center border-b border-white/[0.045] px-4 py-3 last:border-0">
-                          <div><p suppressHydrationWarning className="text-[10px] font-medium text-white/70">{name}</p><p suppressHydrationWarning className="mt-1 font-mono text-[8px] text-white/22">{key}</p></div>
-                          <span className="flex items-center gap-1.5 text-[8px] text-emerald-300/70"><TinyDot color="bg-emerald-400" /> Healthy</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <img
+                  src="/assets/22.png"
+                  alt="Passway dashboard showing SDK keys and runtime secret controls"
+                  className="block h-auto w-full"
+                />
               </div>
             </div>
           </div>
@@ -385,7 +344,7 @@ export default function PasswayLanding() {
 
       <footer className="border-t border-white/[0.065] px-5 py-10 sm:px-8">
         <div className="mx-auto flex max-w-[1160px] flex-col gap-8 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2.5"><PasswayMark compact /><div><p suppressHydrationWarning className="text-sm font-semibold">passway</p><p suppressHydrationWarning className="mt-0.5 text-[10px] text-white/25">Secrets, delivered safely.</p></div></div>
+          <div className="flex items-center gap-2.5"><img src="/assets/logo/passway-logo-dark.svg" alt="Passway" className="h-8 w-auto" /><p suppressHydrationWarning className="text-[10px] text-white/25">Secrets, delivered safely.</p></div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-[11px] text-white/35 sm:ml-auto">
             <a href="https://docs.passway.co.in" className="transition hover:text-white">Documentation</a>
             <a href="https://app.passway.co.in" className="transition hover:text-white">Dashboard</a>
