@@ -8,7 +8,7 @@ It is designed to help teams keep sensitive configuration out of source code, re
 
 - `src` — existing Express API (`api.passway.co.in`)
 - `apps/web` — marketing site (`passway.co.in`)
-- `apps/app` — dashboard (`app.passway.co.in`)
+- `apps/dashboard` — dashboard (`app.passway.co.in`)
 - `apps/docs` — SDK docs (`docs.passway.co.in`)
 
 ## Local Development
@@ -23,7 +23,7 @@ Run each surface in a separate terminal:
 ```bash
 bun run dev:api   # http://localhost:4000
 bun run dev:web   # http://localhost:3000
-bun run dev:app   # http://localhost:3001
+bun run dev:dashboard # http://localhost:3001
 bun run dev:docs  # http://localhost:3002
 ```
 
