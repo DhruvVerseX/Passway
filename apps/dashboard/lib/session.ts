@@ -1,11 +1,33 @@
-﻿import "server-only";
-import { headers } from "next/headers";
+﻿import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { DEFAULT_AUTH_REDIRECT, safeCallbackURL, signInURL } from "@/lib/auth/redirects";
+import { apiBaseURL, DEFAULT_AUTH_REDIRECT, safeCallbackURL, signInURL } from "@/lib/auth-ui";
 
-export async function getSession() {
-  return auth.api.getSession({ headers: await headers() });
+type ApiSession = {
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+  session: unknown;
+};
+
+export async function getSession(): Promise<ApiSession | null> {
+  const incomingHeaders = await headers();
+  const cookie = incomingHeaders.get("cookie");
+  if (!cookie) return null;
+
+  try {
+    const response = await fetch(`${apiBaseURL()}/api/auth/get-session`, {
+      headers: { cookie },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+    return (await response.json()) as ApiSession | null;
+  } catch {
+    return null;
+  }
 }
 
 export async function requireSession(callbackURL = DEFAULT_AUTH_REDIRECT) {
@@ -22,3 +44,4 @@ export async function redirectAuthenticatedUsers() {
 export function redirectAfterAuth(value: string | null | undefined) {
   redirect(safeCallbackURL(value));
 }
+

@@ -22,10 +22,12 @@ const MASTER_KEY_ENV = "PASSWAY_MASTER_KEY";
 function loadMasterKey(): Buffer {
   const fromEnv = process.env[MASTER_KEY_ENV];
   if (fromEnv) {
-    const key = Buffer.from(fromEnv, "base64");
+    const key = /^[0-9a-f]{64}$/i.test(fromEnv)
+      ? Buffer.from(fromEnv, "hex")
+      : Buffer.from(fromEnv, "base64");
     if (key.length !== 32) {
       throw new Error(
-        `${MASTER_KEY_ENV} must decode to exactly 32 bytes (256 bits)`
+        `${MASTER_KEY_ENV} must be a 32-byte base64 value or a 64-character hex value`
       );
     }
     return key;

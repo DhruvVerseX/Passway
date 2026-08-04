@@ -1,6 +1,6 @@
 ﻿import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { isProtectedPath, protectedCallback } from "@/lib/auth/redirects";
+import { dashboardBaseURL, isProtectedPath, signInURL } from "@/lib/auth-ui";
 
 function hasSessionCookie(request: NextRequest) {
   return Boolean(
@@ -15,10 +15,8 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   if (isProtectedPath(pathname) && !hasSessionCookie(request)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/sign-in";
-    url.search = `?callbackURL=${encodeURIComponent(protectedCallback(pathname, search))}`;
-    return NextResponse.redirect(url);
+    const callbackURL = new URL(`${pathname}${search}`, dashboardBaseURL()).toString();
+    return NextResponse.redirect(signInURL(callbackURL));
   }
 
   return NextResponse.next();

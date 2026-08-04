@@ -2,21 +2,59 @@
 
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Github, LockKeyhole, Mail, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { authClient } from "@/lib/auth-client";
 
-const dashboardHome = `${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001"}/dashboard`;
+const dashboardBase = process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001";
+const dashboardHome = `${dashboardBase}/dashboard`;
+
+function callbackURL() {
+  const fallback = dashboardHome;
+  const value = new URLSearchParams(window.location.search).get("callbackURL");
+  if (!value) return fallback;
+  try {
+    const url = new URL(value);
+    return url.origin === new URL(dashboardBase).origin ? url.toString() : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export default function SignupPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [loading, setLoading] = useState<"google" | "github" | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState<"email" | "google" | "github" | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const continueWith = (provider: "google" | "github") => {
+  const continueWith = async (provider: "google" | "github") => {
     setLoading(provider);
-    window.setTimeout(() => {
-      window.location.href = dashboardHome;
-    }, 650);
+    setErrorMessage(null);
+    const { error } = await authClient.signIn.social({ provider, callbackURL: callbackURL() });
+    if (error) {
+      setErrorMessage(error.message ?? "Unable to continue with this provider.");
+      setLoading(null);
+    }
   };
+  const signUp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading("email");
+    setErrorMessage(null);
 
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email"));
+    const { error } = await authClient.signUp.email({
+      name: String(form.get("name")),
+      email,
+      password: String(form.get("password")),
+      callbackURL: callbackURL(),
+    });
+
+    if (error) {
+      setErrorMessage(error.message ?? "Unable to create your account.");
+      setLoading(null);
+      return;
+    }
+
+    window.location.assign(`/auth/verify-email?email=${encodeURIComponent(email)}&callbackURL=${encodeURIComponent(callbackURL())}`);
+  };
   return (
     <main className="auth-page min-h-screen bg-[#0b0d0b] text-white selection:bg-[#b9f55d]/25">
       <div className="auth-grid pointer-events-none fixed inset-0 opacity-45" />
@@ -57,12 +95,13 @@ export default function SignupPage() {
 
           <div className="my-6 flex items-center gap-3"><span className="h-px flex-1 bg-white/[0.065]" /><span className="text-[9px] uppercase text-white/25">or continue with email</span><span className="h-px flex-1 bg-white/[0.065]" /></div>
 
-          <form action={dashboardHome} className="space-y-4">
-            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Full name</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><ShieldCheck size={15} /></span><input required placeholder="Your name" autoComplete="name" className="auth-input" /></span></label>
-            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Work email</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><Mail size={15} /></span><input required type="email" placeholder="you@company.com" autoComplete="email" className="auth-input" /></span></label>
-            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Password</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><LockKeyhole size={15} /></span><input required type={passwordVisible ? "text" : "password"} placeholder="At least 8 characters" autoComplete="new-password" className="auth-input" /><button type="button" onClick={() => setPasswordVisible((value) => !value)} className="absolute inset-y-0 right-3 grid place-items-center px-1 text-white/30 transition hover:text-white/70" aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></span></label>
+          <form onSubmit={signUp} className="space-y-4">
+            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Full name</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><ShieldCheck size={15} /></span><input required name="name" placeholder="Your name" autoComplete="name" className="auth-input" /></span></label>
+            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Work email</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><Mail size={15} /></span><input required name="email" type="email" placeholder="you@company.com" autoComplete="email" className="auth-input" /></span></label>
+            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Password</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><LockKeyhole size={15} /></span><input required name="password" type={passwordVisible ? "text" : "password"} placeholder="At least 12 characters" autoComplete="new-password" className="auth-input" /><button type="button" onClick={() => setPasswordVisible((value) => !value)} className="absolute inset-y-0 right-3 grid place-items-center px-1 text-white/30 transition hover:text-white/70" aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></span></label>
             <p className="text-[10px] leading-5 text-white/30">By continuing, you agree to Passway's <a className="text-white/50 hover:text-white" href="#">Terms</a> and <a className="text-white/50 hover:text-white" href="#">Privacy Policy</a>.</p>
-            <button type="submit" onClick={() => setSubmitted(true)} className="auth-submit">{submitted ? <><Check size={15} strokeWidth={2.7} /> Done</> : <>Create secure workspace<ArrowRight size={15} strokeWidth={2.5} /></>}</button>
+            {errorMessage && <p role="alert" className="text-xs text-red-300">{errorMessage}</p>}
+            <button type="submit" disabled={loading !== null} className="auth-submit">{loading === "email" ? <RefreshCw size={15} className="animate-spin" /> : <>Create secure workspace<ArrowRight size={15} strokeWidth={2.5} /></>}</button>
           </form>
           <p className="mt-7 text-center text-[11px] text-white/35">Already have an account?<a href="/auth/login" className="ml-1 font-medium text-[#b9f55d]/75 transition hover:text-[#b9f55d]">Sign in</a></p>
         </div>
@@ -70,3 +109,4 @@ export default function SignupPage() {
     </main>
   );
 }
+

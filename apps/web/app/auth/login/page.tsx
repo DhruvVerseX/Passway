@@ -2,21 +2,57 @@
 
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Github, LockKeyhole, Mail, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { authClient } from "@/lib/auth-client";
 
-const dashboardHome = `${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001"}/dashboard`;
+const dashboardBase = process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001";
+const dashboardHome = `${dashboardBase}/dashboard`;
+
+function callbackURL() {
+  const fallback = dashboardHome;
+  const value = new URLSearchParams(window.location.search).get("callbackURL");
+  if (!value) return fallback;
+  try {
+    const url = new URL(value);
+    return url.origin === new URL(dashboardBase).origin ? url.toString() : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [loading, setLoading] = useState<"google" | "github" | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState<"email" | "google" | "github" | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const continueWith = (provider: "google" | "github") => {
+  const continueWith = async (provider: "google" | "github") => {
     setLoading(provider);
-    window.setTimeout(() => {
-      window.location.href = dashboardHome;
-    }, 650);
+    setErrorMessage(null);
+    const { error } = await authClient.signIn.social({ provider, callbackURL: callbackURL() });
+    if (error) {
+      setErrorMessage(error.message ?? "Unable to continue with this provider.");
+      setLoading(null);
+    }
   };
+  const signIn = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading("email");
+    setErrorMessage(null);
 
+    const form = new FormData(event.currentTarget);
+    const { error } = await authClient.signIn.email({
+      email: String(form.get("email")),
+      password: String(form.get("password")),
+      rememberMe: form.get("rememberMe") === "on",
+    });
+
+    if (error) {
+      setErrorMessage(error.message ?? "Unable to sign in with that email and password.");
+      setLoading(null);
+      return;
+    }
+
+    window.location.assign(callbackURL());
+  };
   return (
     <main className="auth-page min-h-screen bg-[#0b0d0b] text-white selection:bg-[#b9f55d]/25">
       <div className="auth-grid pointer-events-none fixed inset-0 opacity-45" />
@@ -57,14 +93,15 @@ export default function LoginPage() {
 
           <div className="my-6 flex items-center gap-3"><span className="h-px flex-1 bg-white/[0.065]" /><span className="text-[9px] uppercase text-white/25">or continue with email</span><span className="h-px flex-1 bg-white/[0.065]" /></div>
 
-          <form action={dashboardHome} className="space-y-4">
-            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Email address</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><Mail size={15} /></span><input required type="email" placeholder="you@company.com" autoComplete="email" className="auth-input" /></span></label>
+          <form onSubmit={signIn} className="space-y-4">
+            <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Email address</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><Mail size={15} /></span><input required name="email" type="email" placeholder="you@company.com" autoComplete="email" className="auth-input" /></span></label>
             <div>
               <div className="flex items-center justify-between"><span /><a href="/auth/reset-password" className="mb-2 text-[11px] font-medium text-[#b9f55d]/70 transition hover:text-[#b9f55d]">Forgot password?</a></div>
-              <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Password</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><LockKeyhole size={15} /></span><input required type={passwordVisible ? "text" : "password"} placeholder="Enter your password" autoComplete="current-password" className="auth-input" /><button type="button" onClick={() => setPasswordVisible((value) => !value)} className="absolute inset-y-0 right-3 grid place-items-center px-1 text-white/30 transition hover:text-white/70" aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></span></label>
+              <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Password</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><LockKeyhole size={15} /></span><input required name="password" type={passwordVisible ? "text" : "password"} placeholder="Enter your password" autoComplete="current-password" className="auth-input" /><button type="button" onClick={() => setPasswordVisible((value) => !value)} className="absolute inset-y-0 right-3 grid place-items-center px-1 text-white/30 transition hover:text-white/70" aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></span></label>
             </div>
-            <label className="flex items-center gap-2.5 text-[11px] text-white/40"><input type="checkbox" className="h-3.5 w-3.5 accent-[#b9f55d]" /> Keep me signed in</label>
-            <button type="submit" onClick={() => setSubmitted(true)} className="auth-submit">{submitted ? <><Check size={15} strokeWidth={2.7} /> Done</> : <>Sign in securely<ArrowRight size={15} strokeWidth={2.5} /></>}</button>
+            <label className="flex items-center gap-2.5 text-[11px] text-white/40"><input name="rememberMe" type="checkbox" className="h-3.5 w-3.5 accent-[#b9f55d]" /> Keep me signed in</label>
+            {errorMessage && <p role="alert" className="text-xs text-red-300">{errorMessage}</p>}
+            <button type="submit" disabled={loading !== null} className="auth-submit">{loading === "email" ? <RefreshCw size={15} className="animate-spin" /> : <>Sign in securely<ArrowRight size={15} strokeWidth={2.5} /></>}</button>
           </form>
           <p className="mt-7 text-center text-[11px] text-white/35">New to Passway?<a href="/auth/signup" className="ml-1 font-medium text-[#b9f55d]/75 transition hover:text-[#b9f55d]">Create an account</a></p>
         </div>
@@ -72,3 +109,4 @@ export default function LoginPage() {
     </main>
   );
 }
+

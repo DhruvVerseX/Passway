@@ -1,9 +1,7 @@
-﻿import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetPasswordEmail, verificationEmail } from "../templates";
+﻿import { describe, expect, it } from "vitest";
+import { resetPasswordEmail, verificationEmail } from "../templates.js";
 
 describe("auth email templates", () => {
-  afterEach(() => vi.restoreAllMocks());
-
   it("escapes user-controlled URLs in HTML templates", () => {
     const email = verificationEmail('https://app.passway.co.in/verify?next=<script>');
     expect(email.html).toContain("&lt;script&gt;");

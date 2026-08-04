@@ -1,4 +1,4 @@
-﻿export type EmailTemplate = {
+export type EmailTemplate = {
   subject: string;
   html: string;
   text: string;
@@ -60,6 +60,15 @@ export function verificationEmail(url: string): EmailTemplate {
   };
 }
 
+export function verificationCodeEmail(code: string): EmailTemplate {
+  const safeCode = escapeHtml(code);
+  const body = `<p style="margin:0;font-size:15px;line-height:1.7;color:#c9d1d9;">Enter this code in Passway to verify your email address.</p><p style="margin:24px 0;font-family:monospace;font-size:30px;font-weight:700;letter-spacing:8px;color:#ffffff;">${safeCode}</p><p style="margin:0;font-size:13px;line-height:1.6;color:#8b949e;">This code expires in 10 minutes.</p>`;
+  return {
+    subject: "Your Passway verification code",
+    html: layout("Verify your email address", body, "https://passway.co.in", "Open Passway"),
+    text: `Your Passway verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+  };
+}
 export function resetPasswordEmail(url: string): EmailTemplate {
   const body = '<p style="margin:0;font-size:15px;line-height:1.7;color:#c9d1d9;">Use this secure link to choose a new password for your Passway account.</p>';
   return {

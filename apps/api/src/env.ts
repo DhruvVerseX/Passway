@@ -1,5 +1,4 @@
-﻿import "server-only";
-import { z } from "zod";
+﻿import { z } from "zod";
 
 const authEnvSchema = z.object({
   DATABASE_URL: z.string().min(1).startsWith("postgresql://"),
@@ -15,15 +14,11 @@ const authEnvSchema = z.object({
 
 export type AuthEnv = z.infer<typeof authEnvSchema>;
 
-function isNextProductionBuild() {
-  return process.env.NEXT_PHASE === "phase-production-build";
-}
-
 export function getAuthEnv(): AuthEnv {
   const parsed = authEnvSchema.safeParse({
     DATABASE_URL: process.env.DATABASE_URL,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "http://localhost:4000",
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
@@ -34,20 +29,19 @@ export function getAuthEnv(): AuthEnv {
 
   if (parsed.success) return parsed.data;
 
-  if (isNextProductionBuild()) {
-    return {
-      DATABASE_URL: "postgresql://user:password@localhost:5432/passway",
-      BETTER_AUTH_SECRET: "build-only-placeholder-secret-32-bytes",
-      BETTER_AUTH_URL: "http://localhost:3001",
-      GOOGLE_CLIENT_ID: "build-only",
-      GOOGLE_CLIENT_SECRET: "build-only",
-      GITHUB_CLIENT_ID: "build-only",
-      GITHUB_CLIENT_SECRET: "build-only",
-      RESEND_API_KEY: "build-only",
-      RESEND_FROM_EMAIL: "Passway <auth@passway.co.in>",
-    };
-  }
-
   const missing = parsed.error.issues.map((issue) => issue.path.join(".")).join(", ");
-  throw new Error(`Missing or invalid Passway auth environment variables: ${missing}`);
+  throw new Error(`Missing or invalid Passway API auth environment variables: ${missing}`);
+}
+
+export function getAllowedOrigins() {
+  const configured = process.env.PASSWAY_ALLOWED_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? [];
+  return new Set([
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:4000",
+    "https://passway.co.in",
+    "https://app.passway.co.in",
+    "https://api.passway.co.in",
+    ...configured,
+  ]);
 }

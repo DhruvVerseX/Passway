@@ -1,6 +1,5 @@
-﻿import "server-only";
-import { getAuthEnv } from "@/lib/env";
-import { resetPasswordEmail, verificationEmail, type EmailTemplate } from "./templates";
+import { getAuthEnv } from "../env.js";
+import { resetPasswordEmail, verificationCodeEmail, verificationEmail, type EmailTemplate } from "./templates.js";
 
 type SendEmailInput = EmailTemplate & {
   to: string;
@@ -10,7 +9,7 @@ type Fetcher = typeof fetch;
 
 function assertEmailConfigured() {
   const env = getAuthEnv();
-  if (!env.RESEND_API_KEY || env.RESEND_API_KEY === "build-only") {
+  if (!env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY is required to send Passway authentication emails.");
   }
   return env;
@@ -43,6 +42,10 @@ function deliver(input: SendEmailInput) {
   if (process.env.NODE_ENV === "development") return delivery;
   delivery.catch(() => undefined);
   return undefined;
+}
+
+export function sendVerificationCodeEmail(to: string, code: string) {
+  return deliver({ to, ...verificationCodeEmail(code) });
 }
 
 export function sendVerificationEmail(to: string, url: string) {

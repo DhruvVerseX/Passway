@@ -1,14 +1,10 @@
-﻿import { afterEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("server-only", () => ({}));
+﻿import { afterEach, describe, expect, it } from "vitest";
 
 const OLD_ENV = process.env;
 
 describe("Resend delivery", () => {
   afterEach(() => {
     process.env = OLD_ENV;
-    vi.resetModules();
-    vi.restoreAllMocks();
   });
 
   it("posts email payloads to Resend with mocked network calls", async () => {
@@ -16,7 +12,7 @@ describe("Resend delivery", () => {
       ...OLD_ENV,
       DATABASE_URL: "postgresql://user:password@localhost:5432/passway",
       BETTER_AUTH_SECRET: "12345678901234567890123456789012",
-      BETTER_AUTH_URL: "http://localhost:3001",
+      BETTER_AUTH_URL: "http://localhost:4000",
       GOOGLE_CLIENT_ID: "google",
       GOOGLE_CLIENT_SECRET: "google-secret",
       GITHUB_CLIENT_ID: "github",
@@ -24,7 +20,7 @@ describe("Resend delivery", () => {
       RESEND_API_KEY: "resend-key",
       RESEND_FROM_EMAIL: "Passway <auth@passway.co.in>",
     };
-    const { sendResendEmail } = await import("../resend");
+    const { sendResendEmail } = await import("../resend.js");
     const calls: Parameters<typeof fetch>[] = [];
     const fetcher: typeof fetch = async (...args) => {
       calls.push(args);
@@ -45,7 +41,7 @@ describe("Resend delivery", () => {
       ...OLD_ENV,
       DATABASE_URL: "postgresql://user:password@localhost:5432/passway",
       BETTER_AUTH_SECRET: "12345678901234567890123456789012",
-      BETTER_AUTH_URL: "http://localhost:3001",
+      BETTER_AUTH_URL: "http://localhost:4000",
       GOOGLE_CLIENT_ID: "google",
       GOOGLE_CLIENT_SECRET: "google-secret",
       GITHUB_CLIENT_ID: "github",
@@ -53,11 +49,8 @@ describe("Resend delivery", () => {
       RESEND_API_KEY: "",
       RESEND_FROM_EMAIL: "Passway <auth@passway.co.in>",
     };
-    const { sendResendEmail } = await import("../resend");
+    const { sendResendEmail } = await import("../resend.js");
 
     await expect(sendResendEmail({ to: "user@example.com", subject: "Subject", html: "<p>Hello</p>", text: "Hello" })).rejects.toThrow("RESEND_API_KEY");
   });
 });
-
-
-

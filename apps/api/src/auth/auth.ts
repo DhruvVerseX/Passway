@@ -1,14 +1,12 @@
-﻿import "server-only";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
-import { db, schema } from "@/lib/db";
-import { getAuthEnv } from "@/lib/env";
-import { sendResetPasswordEmail, sendVerificationEmail } from "@/lib/email/resend";
+import { emailOTP } from "better-auth/plugins/email-otp";
+import { authSchema, db } from "../db/index.js";
+import { getAllowedOrigins, getAuthEnv } from "../env.js";
+import { sendResetPasswordEmail, sendVerificationCodeEmail } from "../email/resend.js";
 
 const env = getAuthEnv();
 const isProduction = process.env.NODE_ENV === "production";
-const localOrigin = "http://localhost:3001";
-const productionOrigin = "https://app.passway.co.in";
 
 export const auth = betterAuth({
   appName: "Passway",
@@ -16,9 +14,9 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema,
+    schema: authSchema,
   }),
-  trustedOrigins: isProduction ? [productionOrigin] : [localOrigin, productionOrigin],
+  trustedOrigins: Array.from(getAllowedOrigins()),
   emailAndPassword: {
     enabled: true,
     autoSignIn: false,
@@ -34,10 +32,8 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     sendOnSignIn: true,
-    expiresIn: 60 * 60,
-    sendVerificationEmail: async ({ user, url }) => {
-      await sendVerificationEmail(user.email, url);
-    },
+    expiresIn: 10 * 60,
+    autoSignInAfterVerification: true,
   },
   socialProviders: {
     google: {
@@ -49,6 +45,17 @@ export const auth = betterAuth({
       clientSecret: env.GITHUB_CLIENT_SECRET,
     },
   },
+  plugins: [
+    emailOTP({
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        if (type === "email-verification") await sendVerificationCodeEmail(email, otp);
+      },
+      otpLength: 6,
+      expiresIn: 10 * 60,
+      storeOTP: "hashed",
+      overrideDefaultEmailVerification: true,
+    }),
+  ],
   rateLimit: {
     enabled: true,
     storage: "database",
@@ -66,5 +73,11 @@ export const auth = betterAuth({
   advanced: {
     cookiePrefix: "passway",
     useSecureCookies: isProduction,
+    crossSubDomainCookies: isProduction
+      ? {
+          enabled: true,
+          domain: ".passway.co.in",
+        }
+      : undefined,
   },
 });

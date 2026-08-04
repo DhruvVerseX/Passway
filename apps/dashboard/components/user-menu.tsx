@@ -3,6 +3,7 @@
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { signInURL } from "@/lib/auth-ui";
 
 type User = {
   name?: string | null;
@@ -27,7 +28,7 @@ export function UserMenu({ user: initialUser }: { user?: User | null }) {
 
   async function signOut() {
     await authClient.signOut();
-    router.push("/sign-in");
+    window.location.href = signInURL("/dashboard");
     router.refresh();
   }
 
@@ -52,3 +53,6 @@ export function UserMenu({ user: initialUser }: { user?: User | null }) {
     </details>
   );
 }
+
+
+

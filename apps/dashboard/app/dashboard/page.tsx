@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   Activity,
@@ -358,8 +358,7 @@ export default function PasswayDashboard() {
             <button className="grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] text-white/40 transition hover:bg-white/[0.04] hover:text-white/70" aria-label="Help"><CircleHelp size={16} /></button>
             <button onClick={() => setCreateOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20">
               <Plus size={14} strokeWidth={2.5} /> <span className="hidden sm:inline">Create SDK key</span><span className="sm:hidden">New key</span>
-            </button>
-          </div>
+            </button>`r`n            <UserMenu />`r`n          </div>
         </header>
 
         <main className="mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
