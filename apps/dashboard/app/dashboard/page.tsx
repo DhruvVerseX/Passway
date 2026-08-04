@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Activity,
@@ -32,6 +32,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { UserMenu } from "@/components/user-menu";
 import { useEffect, useMemo, useState } from "react";
 
 type Environment = "Production" | "Preview" | "Development";
@@ -53,7 +54,7 @@ const initialKeys: SdkKey[] = [
   {
     id: "key_live_8fd21",
     name: "Production API",
-    fingerprint: "pw_live_••••••••8F2D",
+    fingerprint: "pw_live_â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢8F2D",
     environment: "Production",
     scopes: ["secrets:read", "sdk:connect"],
     lastUsed: "18 seconds ago",
@@ -64,7 +65,7 @@ const initialKeys: SdkKey[] = [
   {
     id: "key_preview_4ac19",
     name: "Vercel previews",
-    fingerprint: "pw_prev_••••••••4AC1",
+    fingerprint: "pw_prev_â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢4AC1",
     environment: "Preview",
     scopes: ["secrets:read"],
     lastUsed: "12 minutes ago",
@@ -75,7 +76,7 @@ const initialKeys: SdkKey[] = [
   {
     id: "key_dev_91bb2",
     name: "Local development",
-    fingerprint: "pw_dev_••••••••91BB",
+    fingerprint: "pw_dev_â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢91BB",
     environment: "Development",
     scopes: ["secrets:read", "secrets:list"],
     lastUsed: "Yesterday, 11:42 PM",
@@ -179,7 +180,7 @@ function CreateKeyModal({
     onCreate({
       id: `key_${Date.now()}`,
       name: name.trim() || "Untitled SDK key",
-      fingerprint: `pw_${environment.toLowerCase().slice(0, 4)}_••••••••${suffix}`,
+      fingerprint: `pw_${environment.toLowerCase().slice(0, 4)}_â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢${suffix}`,
       environment,
       scopes: ["secrets:read", "sdk:connect"],
       lastUsed: "Never",
@@ -369,7 +370,7 @@ export default function PasswayDashboard() {
                 All systems operational
               </div>
               <h1 className="text-[28px] font-semibold tracking-[-0.045em] text-white sm:text-[34px]">Security control plane</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">Manage how your applications access encrypted secrets—without exposing secret values to source code, logs, or team members.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">Manage how your applications access encrypted secrets-without exposing secret values to source code, logs, or team members.</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.085] px-3 text-xs font-medium text-white/55 transition hover:bg-white/[0.04] hover:text-white">
@@ -384,7 +385,7 @@ export default function PasswayDashboard() {
           <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Key security metrics">
             <MetricCard label="Active SDK keys" value={String(keys.length)} detail="All keys authenticated" icon={KeyRound} accent />
             <MetricCard label="Secrets protected" value="24" detail="Across 3 environments" icon={LockKeyhole} />
-            <MetricCard label="Requests · 24h" value="468.4k" detail="99.99% delivery rate" icon={Activity} />
+            <MetricCard label="Requests - 24h" value="468.4k" detail="99.99% delivery rate" icon={Activity} />
             <MetricCard label="Blocked attempts" value="12" detail="Policy engine enforced" icon={ShieldCheck} />
           </section>
 
@@ -400,7 +401,7 @@ export default function PasswayDashboard() {
                       <p className="mt-0.5 text-[11px] text-white/35">Connect in less than two minutes</p>
                     </div>
                   </div>
-                  <p className="mt-5 max-w-md text-sm leading-6 text-white/40">Install the SDK, add your public key identifier, and read encrypted secrets at runtime. Decryption happens in memory—never in your repository.</p>
+                  <p className="mt-5 max-w-md text-sm leading-6 text-white/40">Install the SDK, add your public key identifier, and read encrypted secrets at runtime. Decryption happens in memory-never in your repository.</p>
                 </div>
                 <a href="https://docs.passway.co.in" className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-[#b9f55d] transition hover:text-[#d2ff8c]">Open guide <ArrowUpRight size={13} /></a>
               </div>
@@ -452,7 +453,7 @@ export default function PasswayDashboard() {
                 <label className="relative flex-1 sm:w-56">
                   <span className="sr-only">Search SDK keys</span>
                   <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search keys…" className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25 focus:border-white/20" />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search keys..." className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25 focus:border-white/20" />
                 </label>
                 <div className="relative">
                   <SlidersHorizontal size={13} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-white/30" />
