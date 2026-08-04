@@ -1,5 +1,6 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { authSchema, db } from "../db/index.js";
 import { getAllowedOrigins, getAuthEnv } from "../env.js";
@@ -44,6 +45,18 @@ export const auth = betterAuth({
       clientId: env.GITHUB_CLIENT_ID,
       clientSecret: env.GITHUB_CLIENT_SECRET,
     },
+  },
+  hooks: {
+    before: createAuthMiddleware(async (context) => {
+      if (context.path !== "/email-otp/request-password-reset") return;
+      const email = String(context.body?.email ?? "").trim().toLowerCase();
+      const user = await context.context.internalAdapter.findUserByEmail(email);
+      if (!user) {
+        throw APIError.fromStatus("BAD_REQUEST", {
+          message: "No Passway account exists for this email.",
+        });
+      }
+    }),
   },
   plugins: [
     emailOTP({

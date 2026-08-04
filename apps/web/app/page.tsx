@@ -139,30 +139,30 @@ export default function PasswayLanding() {
 
   return (
     <div className="min-h-screen overflow-hidden bg-[#0b0d0b] text-white selection:bg-[#b9f55d]/25">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.065] bg-[#0b0d0b]/78 backdrop-blur-xl">
-        <div className="mx-auto flex h-[68px] max-w-[1240px] items-center px-5 sm:px-8">
-          <a href="#" className="flex items-center gap-2.5" aria-label="Passway home">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6">
+        <div className="liquid-glass liquid-glass-island pointer-events-auto relative mx-auto flex h-[58px] w-full max-w-[760px] items-center px-2.5 sm:px-3.5 md:w-fit md:max-w-[calc(100vw-3rem)]">
+          <a href="#" className="flex shrink-0 items-center gap-2.5" aria-label="Passway home">
             <img src="/assets/logo/passway-logo-dark.svg" alt="Passway" className="h-8 w-auto" />
           </a>
 
-          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex" aria-label="Primary navigation">
+          <nav className="ml-5 hidden shrink-0 items-center gap-0.5 md:flex lg:ml-8" aria-label="Primary navigation">
             {[
               ["Product", "#product"],
               ["How it works", "#how-it-works"],
               ["Security", "#security"],
               ["Docs", "https://docs.passway.co.in"],
             ].map(([label, href]) => (
-              <a key={label} href={href} className="rounded-lg px-3 py-2 text-xs font-medium text-white/45 transition hover:bg-white/[0.04] hover:text-white/85">
+              <a key={label} href={href} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-medium text-white/48 transition hover:bg-white/[0.06] hover:text-white/90">
                 {label}
               </a>
             ))}
           </nav>
 
-          <div className="ml-auto hidden items-center gap-2 md:flex">
-            <a href={loginUrl} className="rounded-lg px-3 py-2 text-xs font-medium text-white/55 transition hover:text-white">
+          <div className="ml-5 hidden shrink-0 items-center gap-1.5 md:flex lg:ml-8">
+            <a href={loginUrl} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-medium text-white/60 transition hover:text-white">
               Sign in
             </a>
-            <a href={signupUrl} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]">
+            <a href={signupUrl} className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[11px] bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]">
               Start building <ArrowRight size={13} strokeWidth={2.5} />
             </a>
           </div>
