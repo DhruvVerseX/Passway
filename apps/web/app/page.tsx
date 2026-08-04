@@ -29,6 +29,8 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const installCommand = "bun add @passway/sdk";
+const loginUrl = "/auth/login";
+const signupUrl = "/auth/signup";
 
 const problems = [
   {
@@ -94,7 +96,7 @@ const features = [
   {
     icon: Database,
     title: "Audit every request",
-    copy: "Understand which runtime accessed what, where, and when—without logging values.",
+    copy: "Understand which runtime accessed what, where, and when, without logging values.",
     wide: true,
   },
 ];
@@ -157,10 +159,10 @@ export default function PasswayLanding() {
           </nav>
 
           <div className="ml-auto hidden items-center gap-2 md:flex">
-            <a href="https://app.passway.co.in" className="rounded-lg px-3 py-2 text-xs font-medium text-white/55 transition hover:text-white">
+            <a href={loginUrl} className="rounded-lg px-3 py-2 text-xs font-medium text-white/55 transition hover:text-white">
               Sign in
             </a>
-            <a href="https://app.passway.co.in" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]">
+            <a href={signupUrl} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]">
               Start building <ArrowRight size={13} strokeWidth={2.5} />
             </a>
           </div>
@@ -192,7 +194,7 @@ export default function PasswayLanding() {
             </a>
           ))}
         </nav>
-        <a href="http://localhost:3001" className="mt-8 flex h-12 items-center justify-center gap-2 rounded-xl bg-[#b9f55d] text-sm font-semibold text-[#10130d]">
+        <a href={signupUrl} className="mt-8 flex h-12 items-center justify-center gap-2 rounded-xl bg-[#b9f55d] text-sm font-semibold text-[#10130d]">
           Start building <ArrowRight size={15} />
         </a>
       </div>
@@ -210,11 +212,11 @@ export default function PasswayLanding() {
               Your secrets should never touch your code.
             </h1>
             <p suppressHydrationWarning className="reveal reveal-3 mx-auto mt-7 max-w-[650px] text-[15px] leading-7 text-white/45 sm:text-[17px]">
-              Passway gives every application secure, scoped access to encrypted secrets at runtime—without scattered environment files, exposed credentials, or painful rotations.
+              Passway gives every application secure, scoped access to encrypted secrets at runtime without scattered environment files, exposed credentials, or painful rotations.
             </p>
 
             <div className="reveal reveal-4 mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a href="http://localhost:3001" className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#b9f55d] px-5 text-sm font-semibold text-[#10130d] transition hover:bg-[#c8ff72] sm:w-auto">
+              <a href={signupUrl} className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#b9f55d] px-5 text-sm font-semibold text-[#10130d] transition hover:bg-[#c8ff72] sm:w-auto">
                 Secure your first secret
                 <ArrowRight size={15} strokeWidth={2.4} className="transition-transform group-hover:translate-x-0.5" />
               </a>
@@ -334,7 +336,7 @@ export default function PasswayLanding() {
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#b9f55d] text-[#10130d]"><Blocks size={21} /></span>
               <h2 className="mx-auto mt-7 max-w-2xl text-[34px] font-semibold leading-[1.05] tracking-[-0.05em] sm:text-[48px]">Stop shipping secrets with your source code.</h2>
               <p suppressHydrationWarning className="mx-auto mt-5 max-w-xl text-sm leading-6 text-white/42 sm:text-base">Create your Passway workspace and secure your first application in minutes.</p>
-              <a href="https://app.passway.co.in" className="group mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-[#b9f55d] px-5 text-sm font-semibold text-[#10130d] transition hover:bg-[#c8ff72]">
+              <a href={signupUrl} className="group mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-[#b9f55d] px-5 text-sm font-semibold text-[#10130d] transition hover:bg-[#c8ff72]">
                 Start building for free <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
               </a>
             </div>
@@ -347,11 +349,11 @@ export default function PasswayLanding() {
           <div className="flex items-center gap-2.5"><img src="/assets/logo/passway-logo-dark.svg" alt="Passway" className="h-8 w-auto" /><p suppressHydrationWarning className="text-[10px] text-white/25">Secrets, delivered safely.</p></div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-[11px] text-white/35 sm:ml-auto">
             <a href="https://docs.passway.co.in" className="transition hover:text-white">Documentation</a>
-            <a href="https://app.passway.co.in" className="transition hover:text-white">Dashboard</a>
+            <a href={loginUrl} className="transition hover:text-white">Dashboard</a>
             <a href="https://api.passway.co.in" className="transition hover:text-white">API status</a>
             <a href="https://github.com" aria-label="Passway on GitHub" className="transition hover:text-white"><Github size={14} /></a>
           </div>
-          <p suppressHydrationWarning className="text-[10px] text-white/20">© 2026 Passway</p>
+          <p suppressHydrationWarning className="text-[10px] text-white/20">Copyright 2026 Passway</p>
         </div>
       </footer>
     </div>
