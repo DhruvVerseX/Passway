@@ -25,7 +25,6 @@ import {
   Menu,
   Plus,
   Search,
-  Settings,
   ShieldCheck,
   SlidersHorizontal,
   TerminalSquare,
@@ -331,14 +330,7 @@ export default function PasswayDashboard() {
         </nav>
 
         <div className="border-t border-white/[0.065] p-3">
-          <button className="flex w-full items-center gap-2.5 rounded-xl p-2 text-left transition hover:bg-white/[0.035]">
-            <span className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-transparent text-[10px] font-semibold">AN</span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-medium text-white/75">Abhishek Negi</span>
-              <span className="block truncate text-[10px] text-white/30">Owner</span>
-            </span>
-            <Settings size={14} className="text-white/30" />
-          </button>
+          <UserMenu direct />
         </div>
       </aside>
 
@@ -358,7 +350,8 @@ export default function PasswayDashboard() {
             <button className="grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] text-white/40 transition hover:bg-white/[0.04] hover:text-white/70" aria-label="Help"><CircleHelp size={16} /></button>
             <button onClick={() => setCreateOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20">
               <Plus size={14} strokeWidth={2.5} /> <span className="hidden sm:inline">Create SDK key</span><span className="sm:hidden">New key</span>
-            </button>`r`n            <UserMenu />`r`n          </div>
+            </button>
+          </div>
         </header>
 
         <main className="mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9">

@@ -1,5 +1,5 @@
 import { getAuthEnv } from "../env.js";
-import { resetPasswordEmail, verificationCodeEmail, verificationEmail, type EmailTemplate } from "./templates.js";
+import { passwordResetCodeEmail, resetPasswordEmail, verificationCodeEmail, verificationEmail, type EmailTemplate } from "./templates.js";
 
 type SendEmailInput = EmailTemplate & {
   to: string;
@@ -46,6 +46,10 @@ function deliver(input: SendEmailInput) {
 
 export function sendVerificationCodeEmail(to: string, code: string) {
   return deliver({ to, ...verificationCodeEmail(code) });
+}
+
+export function sendPasswordResetCodeEmail(to: string, code: string) {
+  return deliver({ to, ...passwordResetCodeEmail(code) });
 }
 
 export function sendVerificationEmail(to: string, url: string) {

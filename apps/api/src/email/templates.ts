@@ -69,6 +69,15 @@ export function verificationCodeEmail(code: string): EmailTemplate {
     text: `Your Passway verification code is: ${code}\n\nThis code expires in 10 minutes.`,
   };
 }
+export function passwordResetCodeEmail(code: string): EmailTemplate {
+  const safeCode = escapeHtml(code);
+  const body = `<p style="margin:0;font-size:15px;line-height:1.7;color:#c9d1d9;">Enter this code in Passway to reset your password.</p><p style="margin:24px 0;font-family:monospace;font-size:30px;font-weight:700;letter-spacing:8px;color:#ffffff;">${safeCode}</p><p style="margin:0;font-size:13px;line-height:1.6;color:#8b949e;">This code expires in 10 minutes.</p>`;
+  return {
+    subject: "Your Passway password reset code",
+    html: layout("Reset your password", body, "https://passway.co.in", "Open Passway"),
+    text: `Your Passway password reset code is: ${code}\n\nThis code expires in 10 minutes.`,
+  };
+}
 export function resetPasswordEmail(url: string): EmailTemplate {
   const body = '<p style="margin:0;font-size:15px;line-height:1.7;color:#c9d1d9;">Use this secure link to choose a new password for your Passway account.</p>';
   return {

@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { authSchema, db } from "../db/index.js";
 import { getAllowedOrigins, getAuthEnv } from "../env.js";
-import { sendResetPasswordEmail, sendVerificationCodeEmail } from "../email/resend.js";
+import { sendPasswordResetCodeEmail, sendResetPasswordEmail, sendVerificationCodeEmail } from "../email/resend.js";
 
 const env = getAuthEnv();
 const isProduction = process.env.NODE_ENV === "production";
@@ -49,6 +49,7 @@ export const auth = betterAuth({
     emailOTP({
       sendVerificationOTP: async ({ email, otp, type }) => {
         if (type === "email-verification") await sendVerificationCodeEmail(email, otp);
+        if (type === "forget-password") await sendPasswordResetCodeEmail(email, otp);
       },
       otpLength: 6,
       expiresIn: 10 * 60,
