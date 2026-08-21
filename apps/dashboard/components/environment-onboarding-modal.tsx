@@ -140,7 +140,7 @@ export function EnvironmentOnboardingModal({
       }),
     );
     onClose();
-    router.push(`/dashboard/${slug}`);
+    router.push("/dashboard/environments");
   };
 
   return (

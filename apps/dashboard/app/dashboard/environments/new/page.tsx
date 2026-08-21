@@ -135,7 +135,7 @@ export default function CreateEnvironmentPage() {
           createdAt: new Date().toISOString(),
         }),
       );
-      router.push(`/dashboard/${slug}`);
+      router.push("/dashboard/environments");
     }
   };
 

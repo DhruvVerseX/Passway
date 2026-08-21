@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
 import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-modal";
 
@@ -74,6 +74,42 @@ const initialEnvironments: Environment[] = [
   },
 ];
 
+function readCreatedEnvironments(): Environment[] {
+  if (typeof window === "undefined") return [];
+
+  const created: Environment[] = [];
+  for (let index = 0; index < window.sessionStorage.length; index += 1) {
+    const key = window.sessionStorage.key(index);
+    if (!key?.startsWith("passway_environment_")) continue;
+
+    try {
+      const value = JSON.parse(window.sessionStorage.getItem(key) ?? "null") as {
+        slug?: string;
+        name?: string;
+        type?: EnvironmentType;
+        description?: string;
+        secrets?: unknown[];
+      } | null;
+
+      if (!value?.slug || !value.name || !value.type) continue;
+      created.push({
+        id: value.slug,
+        name: value.name,
+        type: value.type,
+        description: value.description ?? "",
+        secrets: Array.isArray(value.secrets) ? value.secrets.length : 0,
+        tokens: 0,
+        status: "Healthy",
+        updated: "Just now",
+      });
+    } catch {
+      // Ignore malformed session entries and keep the list usable.
+    }
+  }
+
+  return created;
+}
+
 const typeTone: Record<EnvironmentType, string> = {
   Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300",
   Development: "border-sky-400/15 bg-sky-400/[0.07] text-sky-300",
@@ -85,6 +121,16 @@ const typeTone: Record<EnvironmentType, string> = {
 
 export default function EnvironmentsPage() {
   const [environments, setEnvironments] = useState(initialEnvironments);
+
+  useEffect(() => {
+    const created = readCreatedEnvironments();
+    if (!created.length) return;
+
+    setEnvironments((current) => [
+      ...created,
+      ...current.filter((item) => !created.some((entry) => entry.id === item.id)),
+    ]);
+  }, []);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
