@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 const PREFIX = "ps_live";
+const TOKEN_PATTERN = /^ps_(?:live|test)_[A-Za-z0-9_-]{43}$/;
 
 /**
  * Generates a bearer token in the form ps_live_<43 base64url chars>,
@@ -24,5 +25,5 @@ export function hashToken(token: string): string {
 }
 
 export function looksLikePasswayToken(value: string): boolean {
-  return value.startsWith(`${PREFIX}_`);
+  return TOKEN_PATTERN.test(value);
 }

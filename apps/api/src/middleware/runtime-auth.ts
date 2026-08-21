@@ -26,13 +26,16 @@ declare global {
 
 export function requireRuntimeToken(req: Request, res: Response, next: NextFunction) {
   const [scheme, token, extra] = (req.header("authorization") ?? "").split(" ");
+  // ponytail: per-process limiter; replace with Redis when running more than one API instance.
+  if (!allow(`ip:${req.ip ?? "unknown"}`)) {
+    return res.status(429).json({ error: "Too many requests" });
+  }
   if (scheme !== "Bearer" || !token || extra || !looksLikePasswayToken(token)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   const tokenHash = hashToken(token);
-  // ponytail: per-process limiter; replace with Redis when running more than one API instance.
-  if (!allow(`token:${tokenHash}`) || !allow(`ip:${req.ip ?? "unknown"}`)) {
+  if (!allow(`token:${tokenHash}`)) {
     return res.status(429).json({ error: "Too many requests" });
   }
   req.runtimeToken = token;
