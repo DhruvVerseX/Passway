@@ -88,6 +88,7 @@ export const auditAction = pgEnum("audit_action", [
   "RUNTIME_TOKEN_USED",
   "RUNTIME_TOKEN_REVOKED",
   "RUNTIME_SECRET_BUNDLE_READ",
+  "RUNTIME_CONNECTION_VERIFIED",
 ]);
 
 export const workspace = pgTable(

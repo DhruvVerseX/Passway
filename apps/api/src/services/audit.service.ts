@@ -10,7 +10,8 @@ export type AuditAction =
   | "RUNTIME_TOKEN_CREATED"
   | "RUNTIME_TOKEN_USED"
   | "RUNTIME_TOKEN_REVOKED"
-  | "RUNTIME_SECRET_BUNDLE_READ";
+  | "RUNTIME_SECRET_BUNDLE_READ"
+  | "RUNTIME_CONNECTION_VERIFIED";
 
 export interface AuditEvent {
   environmentId: string;

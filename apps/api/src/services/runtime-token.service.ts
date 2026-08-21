@@ -16,6 +16,7 @@ export async function authenticateRuntimeToken(token: string) {
       expiresAt: accessToken.expiresAt,
       status: accessToken.status,
       revoked: accessToken.revoked,
+      environmentName: environment.name,
       environmentStatus: environment.status,
       projectId: project.id,
       workspaceId: workspace.id,

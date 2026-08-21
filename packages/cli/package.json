@@ -1,0 +1,21 @@
+{
+  "name": "@passway/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "passway": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "prepack": "bun run build"
+  }
+}
