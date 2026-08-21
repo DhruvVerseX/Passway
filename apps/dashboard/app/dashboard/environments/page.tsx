@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
 import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-modal";
 
@@ -73,6 +73,42 @@ const initialEnvironments: Environment[] = [
   },
 ];
 
+function readCreatedEnvironments(): Environment[] {
+  if (typeof window === "undefined") return [];
+
+  const created: Environment[] = [];
+  for (let index = 0; index < window.sessionStorage.length; index += 1) {
+    const key = window.sessionStorage.key(index);
+    if (!key?.startsWith("passway_environment_")) continue;
+
+    try {
+      const value = JSON.parse(window.sessionStorage.getItem(key) ?? "null") as {
+        slug?: string;
+        name?: string;
+        type?: EnvironmentType;
+        description?: string;
+        secrets?: unknown[];
+      } | null;
+
+      if (!value?.slug || !value.name || !value.type) continue;
+      created.push({
+        id: value.slug,
+        name: value.name,
+        type: value.type,
+        description: value.description ?? "",
+        secrets: Array.isArray(value.secrets) ? value.secrets.length : 0,
+        tokens: 0,
+        status: "Healthy",
+        updated: "Just now",
+      });
+    } catch {
+      // Ignore malformed session entries and keep the list usable.
+    }
+  }
+
+  return created;
+}
+
 const typeTone: Record<EnvironmentType, string> = {
   Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300",
   Development: "border-sky-400/15 bg-sky-400/[0.07] text-sky-300",
@@ -84,6 +120,16 @@ const typeTone: Record<EnvironmentType, string> = {
 
 export default function EnvironmentsPage() {
   const [environments, setEnvironments] = useState(initialEnvironments);
+
+  useEffect(() => {
+    const created = readCreatedEnvironments();
+    if (!created.length) return;
+
+    setEnvironments((current) => [
+      ...created,
+      ...current.filter((item) => !created.some((entry) => entry.id === item.id)),
+    ]);
+  }, []);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -156,9 +202,65 @@ export default function EnvironmentsPage() {
           <Plus size={14} strokeWidth={2.5} /> Create Environment
         </button>
       </div>
-
+      <section className="mt-6 grid gap-3 sm:grid-cols-3">
+        <article className="rounded-2xl border border-[#b9f55d]/20 bg-[#b9f55d]/[0.055] p-5">
+          <p className="text-[13px] font-medium text-white/45">
+            Total environments
+          </p>
+          <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+            {environments.length}
+          </p>
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
+            <span className="size-1.5 rounded-full bg-emerald-400" /> Across
+            your workspace
+          </p>
+        </article>
+        <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
+          <p className="text-[13px] font-medium text-white/45">Healthy</p>
+          <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+            {environments.filter((item) => item.status === "Healthy").length}
+          </p>
+          <p className="mt-4 text-[11px] text-white/35">
+            Ready for runtime access
+          </p>
+        </article>
+        <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
+          <p className="text-[13px] font-medium text-white/45">
+            Secrets in scope
+          </p>
+          <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+            {environments.reduce((total, item) => total + item.secrets, 0)}
+          </p>
+          <p className="mt-4 text-[11px] text-white/35">
+            Protected across all environments
+          </p>
+        </article>
+      </section>
       <section className="mt-8">
-
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold tracking-[-0.02em] text-white/90">
+              Your environments
+            </h2>
+            <p className="mt-1 text-xs text-white/35">
+              Open an environment to manage secrets, tokens, access, and
+              activity.
+            </p>
+          </div>
+          <label className="relative sm:w-64">
+            <span className="sr-only">Search environments</span>
+            <Search
+              size={13}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/25"
+            />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search environments..."
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25 focus:border-white/20"
+            />
+          </label>
+        </div>
         <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.018]">
           <div className="hidden grid-cols-[1.35fr_1fr_1fr_.8fr_124px] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/25 lg:grid">
             <span>Environment</span>

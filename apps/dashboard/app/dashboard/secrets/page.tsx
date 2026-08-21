@@ -1,27 +1,104 @@
 "use client";
 
-import { Check, CheckCircle2, ChevronDown, Clipboard, Eye, EyeOff, KeyRound, LockKeyhole, MoreHorizontal, Plus, Search, ShieldCheck, SlidersHorizontal, Trash2, X } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clipboard,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LockKeyhole,
+  MoreHorizontal,
+  Plus,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
 
 type Environment = "Production" | "Preview" | "Development";
-type Secret = { id: string; key: string; value: string; environment: Environment; updated: string; owner: string };
+type Secret = {
+  id: string;
+  key: string;
+  value: string;
+  environment: Environment;
+  updated: string;
+  owner: string;
+};
 
 const initialSecrets: Secret[] = [
-  { id: "secret_01", key: "DATABASE_URL", value: "postgresql://app:••••••••@db.passway.cloud:5432/app", environment: "Production", updated: "2 hours ago", owner: "You" },
-  { id: "secret_02", key: "OPENAI_API_KEY", value: "sk-proj-••••••••••••••••••••", environment: "Production", updated: "Yesterday", owner: "You" },
-  { id: "secret_03", key: "BETTER_AUTH_SECRET", value: "••••••••••••••••••••••••••••••••", environment: "Preview", updated: "3 days ago", owner: "You" },
-  { id: "secret_04", key: "NEXT_PUBLIC_APP_URL", value: "https://app.passway.co.in", environment: "Development", updated: "6 days ago", owner: "Ari Sharma" },
-  { id: "secret_05", key: "RESEND_API_KEY", value: "re_••••••••••••••••••••", environment: "Production", updated: "Jun 28, 2026", owner: "You" },
+  {
+    id: "secret_01",
+    key: "DATABASE_URL",
+    value: "postgresql://app:••••••••@db.passway.cloud:5432/app",
+    environment: "Production",
+    updated: "2 hours ago",
+    owner: "You",
+  },
+  {
+    id: "secret_02",
+    key: "OPENAI_API_KEY",
+    value: "sk-proj-••••••••••••••••••••",
+    environment: "Production",
+    updated: "Yesterday",
+    owner: "You",
+  },
+  {
+    id: "secret_03",
+    key: "BETTER_AUTH_SECRET",
+    value: "••••••••••••••••••••••••••••••••",
+    environment: "Preview",
+    updated: "3 days ago",
+    owner: "You",
+  },
+  {
+    id: "secret_04",
+    key: "NEXT_PUBLIC_APP_URL",
+    value: "https://app.passway.co.in",
+    environment: "Development",
+    updated: "6 days ago",
+    owner: "Ari Sharma",
+  },
+  {
+    id: "secret_05",
+    key: "RESEND_API_KEY",
+    value: "re_••••••••••••••••••••",
+    environment: "Production",
+    updated: "Jun 28, 2026",
+    owner: "You",
+  },
 ];
 
-const tone: Record<Environment, string> = { Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300", Preview: "border-violet-400/15 bg-violet-400/[0.07] text-violet-300", Development: "border-sky-400/15 bg-sky-400/[0.07] text-sky-300" };
+const tone: Record<Environment, string> = {
+  Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300",
+  Preview: "border-violet-400/15 bg-violet-400/[0.07] text-violet-300",
+  Development: "border-sky-400/15 bg-sky-400/[0.07] text-sky-300",
+};
 
 function EnvironmentBadge({ environment }: { environment: Environment }) {
-  return <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${tone[environment]}`}><span className="mr-1.5 h-1.5 w-1.5 self-center rounded-full bg-current" />{environment}</span>;
+  return (
+    <span
+      className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${tone[environment]}`}
+    >
+      <span className="mr-1.5 h-1.5 w-1.5 self-center rounded-full bg-current" />
+      {environment}
+    </span>
+  );
 }
 
-function AddSecretPanel({ open, onClose, onAdd }: { open: boolean; onClose: () => void; onAdd: (secret: Secret) => void }) {
+function AddSecretPanel({
+  open,
+  onClose,
+  onAdd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdd: (secret: Secret) => void;
+}) {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [environment, setEnvironment] = useState<Environment>("Production");
@@ -30,17 +107,131 @@ function AddSecretPanel({ open, onClose, onAdd }: { open: boolean; onClose: () =
   const canSubmit = key.trim().length > 1 && value.trim().length > 0;
   const submit = () => {
     if (!canSubmit) return;
-    onAdd({ id: `secret_${Date.now()}`, key: key.trim().toUpperCase().replace(/\s+/g, "_"), value, environment, updated: "Just now", owner: "You" });
-    setKey(""); setValue(""); setEnvironment("Production");
+    onAdd({
+      id: `secret_${Date.now()}`,
+      key: key.trim().toUpperCase().replace(/\s+/g, "_"),
+      value,
+      environment,
+      updated: "Just now",
+      owner: "You",
+    });
+    setKey("");
+    setValue("");
+    setEnvironment("Production");
   };
 
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}>
-    <section className="w-full max-w-[540px] rounded-t-3xl border border-white/10 bg-[#111510] p-6 shadow-2xl sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="add-secret-title">
-      <div className="flex items-start justify-between"><div><div className="mb-4 grid size-10 place-items-center rounded-xl border border-[#b9f55d]/20 bg-[#b9f55d]/10 text-[#b9f55d]"><LockKeyhole size={18} /></div><h2 id="add-secret-title" className="text-xl font-semibold tracking-[-0.025em]">Add a secret</h2><p className="mt-1.5 text-sm leading-6 text-white/40">Values are encrypted before they leave this session.</p></div><button onClick={onClose} className="grid size-9 place-items-center rounded-lg text-white/45 transition hover:bg-white/[0.06] hover:text-white" aria-label="Close panel"><X size={18} /></button></div>
-      <div className="mt-7 space-y-5"><label className="block"><span className="mb-2 block text-xs font-medium text-white/65">Secret key</span><input autoFocus value={key} onChange={(event) => setKey(event.target.value)} className="mono h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 text-sm uppercase text-white outline-none transition placeholder:normal-case placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]" placeholder="e.g. STRIPE_SECRET_KEY" /></label><label className="block"><span className="mb-2 block text-xs font-medium text-white/65">Secret value</span><textarea value={value} onChange={(event) => setValue(event.target.value)} className="mono min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-white outline-none transition placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]" placeholder="Paste the value here" /></label><fieldset><legend className="mb-2 text-xs font-medium text-white/65">Environment</legend><div className="grid grid-cols-3 gap-2">{(["Production", "Preview", "Development"] as Environment[]).map((item) => <button key={item} type="button" onClick={() => setEnvironment(item)} className={`rounded-xl border px-3 py-3 text-left transition ${environment === item ? "border-[#b9f55d]/40 bg-[#b9f55d]/[0.08] text-white" : "border-white/[0.08] bg-white/[0.02] text-white/45 hover:bg-white/[0.04]"}`}><span className={`mb-2 block size-2 rounded-full ${item === "Production" ? "bg-emerald-400" : item === "Preview" ? "bg-violet-400" : "bg-sky-400"}`} /><span className="text-[11px] font-medium sm:text-xs">{item}</span></button>)}</div></fieldset><div className="flex gap-3 rounded-xl border border-[#b9f55d]/15 bg-[#b9f55d]/[0.04] p-3.5"><ShieldCheck className="mt-0.5 shrink-0 text-[#b9f55d]" size={15} /><p className="text-xs leading-5 text-white/40"><span className="font-medium text-white/70">Scoped by environment.</span> This value will only be available to authorized runtimes in {environment.toLowerCase()}.</p></div></div>
-      <div className="mt-7 flex justify-end gap-2"><button onClick={onClose} className="h-10 rounded-xl border border-white/10 px-4 text-sm font-medium text-white/60 transition hover:bg-white/[0.05]">Cancel</button><button onClick={submit} disabled={!canSubmit} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#b9f55d] px-4 text-sm font-semibold text-[#11140c] transition hover:bg-[#c8ff72] disabled:pointer-events-none disabled:opacity-40"><Plus size={15} strokeWidth={2.5} /> Add secret</button></div>
-    </section>
-  </div>;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      role="presentation"
+      onMouseDown={(event) => event.currentTarget === event.target && onClose()}
+    >
+      <section
+        className="w-full max-w-[540px] rounded-t-3xl border border-white/10 bg-[#111510] p-6 shadow-2xl sm:rounded-3xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-secret-title"
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mb-4 grid size-10 place-items-center rounded-xl border border-[#b9f55d]/20 bg-[#b9f55d]/10 text-[#b9f55d]">
+              <LockKeyhole size={18} />
+            </div>
+            <h2
+              id="add-secret-title"
+              className="text-xl font-semibold tracking-[-0.025em]"
+            >
+              Add a secret
+            </h2>
+            <p className="mt-1.5 text-sm leading-6 text-white/40">
+              Values are encrypted before they leave this session.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="grid size-9 place-items-center rounded-lg text-white/45 transition hover:bg-white/[0.06] hover:text-white"
+            aria-label="Close panel"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="mt-7 space-y-5">
+          <label className="block">
+            <span className="mb-2 block text-xs font-medium text-white/65">
+              Secret key
+            </span>
+            <input
+              autoFocus
+              value={key}
+              onChange={(event) => setKey(event.target.value)}
+              className="mono h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 text-sm uppercase text-white outline-none transition placeholder:normal-case placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]"
+              placeholder="e.g. STRIPE_SECRET_KEY"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs font-medium text-white/65">
+              Secret value
+            </span>
+            <textarea
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              className="mono min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-white outline-none transition placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]"
+              placeholder="Paste the value here"
+            />
+          </label>
+          <fieldset>
+            <legend className="mb-2 text-xs font-medium text-white/65">
+              Environment
+            </legend>
+            <div className="grid grid-cols-3 gap-2">
+              {(["Production", "Preview", "Development"] as Environment[]).map(
+                (item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setEnvironment(item)}
+                    className={`rounded-xl border px-3 py-3 text-left transition ${environment === item ? "border-[#b9f55d]/40 bg-[#b9f55d]/[0.08] text-white" : "border-white/[0.08] bg-white/[0.02] text-white/45 hover:bg-white/[0.04]"}`}
+                  >
+                    <span
+                      className={`mb-2 block size-2 rounded-full ${item === "Production" ? "bg-emerald-400" : item === "Preview" ? "bg-violet-400" : "bg-sky-400"}`}
+                    />
+                    <span className="text-[11px] font-medium sm:text-xs">
+                      {item}
+                    </span>
+                  </button>
+                ),
+              )}
+            </div>
+          </fieldset>
+          <div className="flex gap-3 rounded-xl border border-[#b9f55d]/15 bg-[#b9f55d]/[0.04] p-3.5">
+            <ShieldCheck className="mt-0.5 shrink-0 text-[#b9f55d]" size={15} />
+            <p className="text-xs leading-5 text-white/40">
+              <span className="font-medium text-white/70">
+                Scoped by environment.
+              </span>{" "}
+              This value will only be available to authorized runtimes in{" "}
+              {environment.toLowerCase()}.
+            </p>
+          </div>
+        </div>
+        <div className="mt-7 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="h-10 rounded-xl border border-white/10 px-4 text-sm font-medium text-white/60 transition hover:bg-white/[0.05]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={!canSubmit}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#b9f55d] px-4 text-sm font-semibold text-[#11140c] transition hover:bg-[#c8ff72] disabled:pointer-events-none disabled:opacity-40"
+          >
+            <Plus size={15} strokeWidth={2.5} /> Add secret
+          </button>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 export default function SecretsPage() {
@@ -52,22 +243,317 @@ export default function SecretsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
-  const visibleSecrets = useMemo(() => { const normalized = query.trim().toLowerCase(); return secrets.filter((secret) => (environment === "All" || secret.environment === environment) && (!normalized || `${secret.key} ${secret.environment} ${secret.owner}`.toLowerCase().includes(normalized))); }, [environment, query, secrets]);
-  const toggleReveal = (id: string) => setRevealed((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-  const copySecret = async (secret: Secret) => { try { await navigator.clipboard.writeText(secret.value); } catch { /* embedded previews can block clipboard */ } setCopied(secret.id); window.setTimeout(() => setCopied(null), 1700); };
-  const addSecret = (secret: Secret) => { setSecrets((current) => [secret, ...current]); setAddOpen(false); setToast(`${secret.key} added to ${secret.environment}`); window.setTimeout(() => setToast(null), 2800); };
-  const removeSecret = (id: string) => { const secret = secrets.find((item) => item.id === id); setSecrets((current) => current.filter((item) => item.id !== id)); if (secret) { setToast(`${secret.key} removed`); window.setTimeout(() => setToast(null), 2400); } };
+  const visibleSecrets = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return secrets.filter(
+      (secret) =>
+        (environment === "All" || secret.environment === environment) &&
+        (!normalized ||
+          `${secret.key} ${secret.environment} ${secret.owner}`
+            .toLowerCase()
+            .includes(normalized)),
+    );
+  }, [environment, query, secrets]);
+  const toggleReveal = (id: string) =>
+    setRevealed((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
+    );
+  const copySecret = async (secret: Secret) => {
+    try {
+      await navigator.clipboard.writeText(secret.value);
+    } catch {
+      /* embedded previews can block clipboard */
+    }
+    setCopied(secret.id);
+    window.setTimeout(() => setCopied(null), 1700);
+  };
+  const addSecret = (secret: Secret) => {
+    setSecrets((current) => [secret, ...current]);
+    setAddOpen(false);
+    setToast(`${secret.key} added to ${secret.environment}`);
+    window.setTimeout(() => setToast(null), 2800);
+  };
+  const removeSecret = (id: string) => {
+    const secret = secrets.find((item) => item.id === id);
+    setSecrets((current) => current.filter((item) => item.id !== id));
+    if (secret) {
+      setToast(`${secret.key} removed`);
+      window.setTimeout(() => setToast(null), 2400);
+    }
+  };
 
-  return <ControlPlaneShell active="Secrets" title="Secrets">
-    <AddSecretPanel open={addOpen} onClose={() => setAddOpen(false)} onAdd={addSecret} />
-    {toast && <div className="fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-white/10 bg-[#191c17] px-4 py-3 text-sm font-medium shadow-2xl" role="status"><CheckCircle2 size={16} className="text-[#b9f55d]" /> {toast}</div>}
-    <div className="flex flex-col gap-5 border-b border-white/[0.07] pb-8 sm:flex-row sm:items-end sm:justify-between"><div><div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[#b9f55d]/80"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#b9f55d] opacity-40" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#b9f55d]" /></span>Encrypted secret store</div><h1 className="text-[30px] font-semibold tracking-[-0.045em] text-white sm:text-[36px]">Secrets</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">One controlled place for runtime configuration. Values are encrypted at rest and released only to scoped applications.</p></div><button onClick={() => setAddOpen(true)} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#b9f55d] px-4 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"><Plus size={15} strokeWidth={2.5} /> Add secret</button></div>
+  return (
+    <ControlPlaneShell active="Secrets" title="Secrets">
+      <AddSecretPanel
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdd={addSecret}
+      />
+      {toast && (
+        <div
+          className="fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-white/10 bg-[#191c17] px-4 py-3 text-sm font-medium shadow-2xl"
+          role="status"
+        >
+          <CheckCircle2 size={16} className="text-[#b9f55d]" /> {toast}
+        </div>
+      )}
+      <div className="flex flex-col gap-5 border-b border-white/[0.07] pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[#b9f55d]/80">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#b9f55d] opacity-40" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#b9f55d]" />
+            </span>
+            Encrypted secret store
+          </div>
+          <h1 className="text-[30px] font-semibold tracking-[-0.045em] text-white sm:text-[36px]">
+            Secrets
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
+            One controlled place for runtime configuration. Values are encrypted
+            at rest and released only to scoped applications.
+          </p>
+        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#b9f55d] px-4 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"
+        >
+          <Plus size={15} strokeWidth={2.5} /> Add secret
+        </button>
+      </div>
 
-    <section className="mt-6 grid gap-3 sm:grid-cols-3"><article className="rounded-2xl border border-[#b9f55d]/20 bg-[#b9f55d]/[0.055] p-5"><div className="flex items-start justify-between"><div><p className="text-[13px] font-medium text-white/45">Total secrets</p><p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">{secrets.length}</p></div><span className="grid size-9 place-items-center rounded-xl border border-[#b9f55d]/20 bg-[#b9f55d]/10 text-[#b9f55d]"><LockKeyhole size={16} /></span></div><p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35"><span className="size-1.5 rounded-full bg-emerald-400" /> Across 3 environments</p></article><article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5"><div className="flex items-start justify-between"><div><p className="text-[13px] font-medium text-white/45">Healthy coverage</p><p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">100%</p></div><span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-emerald-300"><Check size={16} /></span></div><p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35"><span className="size-1.5 rounded-full bg-emerald-400" /> No stale values detected</p></article><article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5"><div className="flex items-start justify-between"><div><p className="text-[13px] font-medium text-white/45">Last rotation</p><p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">2h</p></div><span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/50"><KeyRound size={16} /></span></div><p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35"><span className="size-1.5 rounded-full bg-[#b9f55d]" /> DATABASE_URL updated</p></article></section>
+      <section className="mt-6 grid gap-3 sm:grid-cols-3">
+        <article className="rounded-2xl border border-[#b9f55d]/20 bg-[#b9f55d]/[0.055] p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[13px] font-medium text-white/45">
+                Total secrets
+              </p>
+              <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+                {secrets.length}
+              </p>
+            </div>
+            <span className="grid size-9 place-items-center rounded-xl border border-[#b9f55d]/20 bg-[#b9f55d]/10 text-[#b9f55d]">
+              <LockKeyhole size={16} />
+            </span>
+          </div>
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
+            <span className="size-1.5 rounded-full bg-emerald-400" /> Across 3
+            environments
+          </p>
+        </article>
+        <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[13px] font-medium text-white/45">
+                Healthy coverage
+              </p>
+              <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+                100%
+              </p>
+            </div>
+            <span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-emerald-300">
+              <Check size={16} />
+            </span>
+          </div>
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
+            <span className="size-1.5 rounded-full bg-emerald-400" /> No stale
+            values detected
+          </p>
+        </article>
+        <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[13px] font-medium text-white/45">
+                Last rotation
+              </p>
+              <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+                2h
+              </p>
+            </div>
+            <span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/50">
+              <KeyRound size={16} />
+            </span>
+          </div>
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
+            <span className="size-1.5 rounded-full bg-[#b9f55d]" /> DATABASE_URL
+            updated
+          </p>
+        </article>
+      </section>
 
-    <section className="mt-8" aria-labelledby="secrets-heading"><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h2 id="secrets-heading" className="text-base font-semibold tracking-[-0.02em] text-white/90">All secrets</h2><p className="mt-1 text-xs text-white/35">Manage encrypted values and environment scope.</p></div><div className="flex items-center gap-2"><label className="relative flex-1 sm:w-56"><span className="sr-only">Search secrets</span><Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/25" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search secrets..." className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25 focus:border-white/20" /></label><div className="relative"><SlidersHorizontal size={13} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-white/30" /><select value={environment} onChange={(event) => setEnvironment(event.target.value as "All" | Environment)} className="h-9 appearance-none rounded-lg border border-white/[0.08] bg-[#0d0f0c] pl-8 pr-8 text-xs text-white/50 outline-none"><option value="All">All environments</option><option value="Production">Production</option><option value="Preview">Preview</option><option value="Development">Development</option></select><ChevronDown size={12} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/25" /></div></div></div>
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.018]"><div className="hidden grid-cols-[1.25fr_1.15fr_1.7fr_1fr_90px] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/25 lg:grid"><span>Secret</span><span>Environment</span><span>Value</span><span>Updated</span><span /></div>{visibleSecrets.length ? visibleSecrets.map((secret) => { const isRevealed = revealed.includes(secret.id); return <article key={secret.id} className="group grid gap-4 border-b border-white/[0.055] px-4 py-4 last:border-0 sm:px-5 lg:grid-cols-[1.25fr_1.15fr_1.7fr_1fr_90px] lg:items-center"><div className="flex min-w-0 items-start gap-3"><span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-white/40 transition group-hover:border-[#b9f55d]/20 group-hover:text-[#b9f55d]"><KeyRound size={16} /></span><div className="min-w-0"><h3 className="truncate font-mono text-xs font-medium text-white/80">{secret.key}</h3><p className="mt-1 text-[10px] text-white/25">Added by {secret.owner}</p></div></div><div><EnvironmentBadge environment={secret.environment} /></div><div className="flex min-w-0 items-center gap-2"><code className={`min-w-0 truncate font-mono text-[10px] ${isRevealed ? "text-white/65" : "text-white/35"}`}>{isRevealed ? secret.value : "••••••••••••••••••••"}</code><button onClick={() => toggleReveal(secret.id)} className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70" aria-label={`${isRevealed ? "Hide" : "Reveal"} ${secret.key}`} >{isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}</button><button onClick={() => copySecret(secret)} className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70" aria-label={`Copy ${secret.key}`}>{copied === secret.id ? <Check size={13} className="text-[#b9f55d]" /> : <Clipboard size={13} />}</button></div><div><p className="text-[11px] text-white/55">{secret.updated}</p><p className="mt-1 text-[10px] text-white/25">Last changed</p></div><div className="flex items-center justify-end gap-1"><button onClick={() => removeSecret(secret.id)} className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300" aria-label={`Delete ${secret.key}`}><Trash2 size={14} /></button><button className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white" aria-label={`More actions for ${secret.key}`}><MoreHorizontal size={16} /></button></div></article>; }) : <div className="grid place-items-center px-6 py-16 text-center"><div className="grid size-10 place-items-center rounded-xl border border-white/[0.07] text-white/25"><Search size={16} /></div><p className="mt-3 text-sm font-medium text-white/60">No secrets found</p><p className="mt-1 text-xs text-white/30">Try another search or environment.</p></div>}</div>
-    </section>
-    <footer className="mt-8 flex flex-col gap-2 border-t border-white/[0.06] py-5 text-[10px] text-white/22 sm:flex-row sm:items-center sm:justify-between"><p>Passway encrypts secret payloads with envelope encryption and scoped runtime access.</p><div className="flex items-center gap-4"><a href="https://docs.passway.co.in/security" className="hover:text-white/50">Security</a><a href="https://passway.co.in/status" className="hover:text-white/50">Status</a><span>API v1</span></div></footer>
-  </ControlPlaneShell>;
+      <section className="mt-8" aria-labelledby="secrets-heading">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2
+              id="secrets-heading"
+              className="text-base font-semibold tracking-[-0.02em] text-white/90"
+            >
+              All secrets
+            </h2>
+            <p className="mt-1 text-xs text-white/35">
+              Manage encrypted values and environment scope.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="relative flex-1 sm:w-56">
+              <span className="sr-only">Search secrets</span>
+              <Search
+                size={13}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/25"
+              />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search secrets..."
+                className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25 focus:border-white/20"
+              />
+            </label>
+            <div className="relative">
+              <SlidersHorizontal
+                size={13}
+                className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-white/30"
+              />
+              <select
+                value={environment}
+                onChange={(event) =>
+                  setEnvironment(event.target.value as "All" | Environment)
+                }
+                className="h-9 appearance-none rounded-lg border border-white/[0.08] bg-[#0d0f0c] pl-8 pr-8 text-xs text-white/50 outline-none"
+              >
+                <option value="All">All environments</option>
+                <option value="Production">Production</option>
+                <option value="Preview">Preview</option>
+                <option value="Development">Development</option>
+              </select>
+              <ChevronDown
+                size={12}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/25"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.018]">
+          <div className="hidden grid-cols-[1.25fr_1.15fr_1.7fr_1fr_90px] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/25 lg:grid">
+            <span>Secret</span>
+            <span>Environment</span>
+            <span>Value</span>
+            <span>Updated</span>
+            <span />
+          </div>
+          {visibleSecrets.length ? (
+            visibleSecrets.map((secret) => {
+              const isRevealed = revealed.includes(secret.id);
+              return (
+                <article
+                  key={secret.id}
+                  className="group grid gap-4 border-b border-white/[0.055] px-4 py-4 last:border-0 sm:px-5 lg:grid-cols-[1.25fr_1.15fr_1.7fr_1fr_90px] lg:items-center"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-white/40 transition group-hover:border-[#b9f55d]/20 group-hover:text-[#b9f55d]">
+                      <KeyRound size={16} />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="truncate font-mono text-xs font-medium text-white/80">
+                        {secret.key}
+                      </h3>
+                      <p className="mt-1 text-[10px] text-white/25">
+                        Added by {secret.owner}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <EnvironmentBadge environment={secret.environment} />
+                  </div>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <code
+                      className={`min-w-0 truncate font-mono text-[10px] ${isRevealed ? "text-white/65" : "text-white/35"}`}
+                    >
+                      {isRevealed ? secret.value : "••••••••••••••••••••"}
+                    </code>
+                    <button
+                      onClick={() => toggleReveal(secret.id)}
+                      className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70"
+                      aria-label={`${isRevealed ? "Hide" : "Reveal"} ${secret.key}`}
+                    >
+                      {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                    <button
+                      onClick={() => copySecret(secret)}
+                      className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70"
+                      aria-label={`Copy ${secret.key}`}
+                    >
+                      {copied === secret.id ? (
+                        <Check size={13} className="text-[#b9f55d]" />
+                      ) : (
+                        <Clipboard size={13} />
+                      )}
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/55">
+                      {secret.updated}
+                    </p>
+                    <p className="mt-1 text-[10px] text-white/25">
+                      Last changed
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => removeSecret(secret.id)}
+                      className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300"
+                      aria-label={`Delete ${secret.key}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <button
+                      className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white"
+                      aria-label={`More actions for ${secret.key}`}
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                  </div>
+                </article>
+              );
+            })
+          ) : (
+            <div className="grid place-items-center px-6 py-16 text-center">
+              <div className="grid size-10 place-items-center rounded-xl border border-white/[0.07] text-white/25">
+                <Search size={16} />
+              </div>
+              <p className="mt-3 text-sm font-medium text-white/60">
+                No secrets found
+              </p>
+              <p className="mt-1 text-xs text-white/30">
+                Try another search or environment.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+      <footer className="mt-8 flex flex-col gap-2 border-t border-white/[0.06] py-5 text-[10px] text-white/22 sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          Passway encrypts secret payloads with envelope encryption and scoped
+          runtime access.
+        </p>
+        <div className="flex items-center gap-4">
+          <a
+            href="https://docs.passway.co.in/security"
+            className="hover:text-white/50"
+          >
+            Security
+          </a>
+          <a
+            href="https://passway.co.in/status"
+            className="hover:text-white/50"
+          >
+            Status
+          </a>
+          <span>API v1</span>
+        </div>
+      </footer>
+    </ControlPlaneShell>
+  );
 }

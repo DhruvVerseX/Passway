@@ -26,14 +26,19 @@ export function safeCallbackURL(value: string | null | undefined) {
   try {
     const url = new URL(value);
     const dashboardOrigin = new URL(dashboardBaseURL()).origin;
-    return url.origin === dashboardOrigin ? `${url.pathname}${url.search}${url.hash}` : DEFAULT_AUTH_REDIRECT;
+    return url.origin === dashboardOrigin
+      ? `${url.pathname}${url.search}${url.hash}`
+      : DEFAULT_AUTH_REDIRECT;
   } catch {
     return DEFAULT_AUTH_REDIRECT;
   }
 }
 
 export function signInURL(callbackURL: string) {
-  const callback = new URL(safeCallbackURL(callbackURL), dashboardBaseURL()).toString();
+  const callback = new URL(
+    safeCallbackURL(callbackURL),
+    dashboardBaseURL(),
+  ).toString();
   return `${webBaseURL()}/auth/login?callbackURL=${encodeURIComponent(callback)}`;
 }
 
@@ -42,5 +47,10 @@ export function protectedCallback(pathname: string, search = "") {
 }
 
 export function isProtectedPath(pathname: string) {
-  return pathname === "/dashboard" || pathname.startsWith("/dashboard/") || pathname === "/projects" || pathname.startsWith("/projects/");
+  return (
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/projects" ||
+    pathname.startsWith("/projects/")
+  );
 }
