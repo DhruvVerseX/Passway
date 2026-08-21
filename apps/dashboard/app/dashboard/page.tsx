@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { UserMenu } from "@/components/user-menu";
+import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-modal";
 import { useEffect, useMemo, useState } from "react";
 
 type Environment = "Production" | "Preview" | "Development";
@@ -97,7 +98,7 @@ const navigation = [
   { label: "Overview", icon: Gauge, active: true, href: "/dashboard" },
   { label: "SDK keys", icon: KeyRound, count: "3", href: "#" },
   { label: "Secrets", icon: LockKeyhole, count: "24", href: "/dashboard/secrets" },
-  { label: "Environments", icon: Box, href: "/dashboard/environments/new" },
+  { label: "Environments", icon: Box, href: "/dashboard/environments/new", modal: true },
   { label: "Access", icon: Users, href: "#" },
   { label: "Audit log", icon: Activity, href: "#" },
 ];
@@ -246,6 +247,7 @@ export default function PasswayDashboard() {
   const [query, setQuery] = useState("");
   const [environment, setEnvironment] = useState<"All" | Environment>("All");
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [isEnvironmentOpen, setEnvironmentOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -279,6 +281,7 @@ export default function PasswayDashboard() {
   return (
     <div className="min-h-screen bg-[#0b0d0b] text-white selection:bg-[#b9f55d]/25">
       <CreateKeyModal open={isCreateOpen} onClose={() => setCreateOpen(false)} onCreate={createKey} />
+      <EnvironmentOnboardingModal open={isEnvironmentOpen} onClose={() => setEnvironmentOpen(false)} />
 
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-white/10 bg-[#191c17] px-4 py-3 text-sm font-medium shadow-2xl" role="status">
@@ -309,7 +312,12 @@ export default function PasswayDashboard() {
         <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Dashboard navigation">
           <p className="mb-2 px-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/25">Workspace</p>
           <div className="space-y-0.5">
-            {navigation.map((item) => (
+            {navigation.map((item) => item.modal ? (
+              <button key={item.label} onClick={() => setEnvironmentOpen(true)} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-xs font-medium text-white/42 transition hover:bg-white/[0.035] hover:text-white/75">
+                <item.icon size={15} strokeWidth={1.8} />
+                {item.label}
+              </button>
+            ) : (
               <Link key={item.label} href={item.href} className={`flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-xs font-medium transition ${item.active ? "bg-white/[0.065] text-white" : "text-white/42 hover:bg-white/[0.035] hover:text-white/75"}`}>
                 <item.icon size={15} strokeWidth={item.active ? 2.2 : 1.8} className={item.active ? "text-[#b9f55d]" : ""} />
                 {item.label}
@@ -348,9 +356,11 @@ export default function PasswayDashboard() {
               <Search size={14} /> Search
               <span className="ml-4 flex items-center gap-0.5 rounded border border-white/[0.08] bg-white/[0.035] px-1.5 py-0.5 font-mono text-[9px] text-white/25"><Command size={9} />K</span>
             </button>
-            <button className="grid h-9 w-9 place-items-center bg-primary rounded-lg border border-white/[0.08] text-white/40 transition hover:bg-white/[0.04] hover:text-white/70" aria-label="Help"><CircleHelp size={16} /></button>
-            <Link href="/dashboard/environments/new" className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.09] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.04] hover:text-white sm:inline-flex"><Box size={14} /> New environment</Link>
-
+            <button className="grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] text-white/40 transition hover:bg-white/[0.04] hover:text-white/70" aria-label="Help"><CircleHelp size={16} /></button>
+            <button onClick={() => setEnvironmentOpen(true)} className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.09] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.04] hover:text-white sm:inline-flex"><Box size={14} /> New environment</button>
+            <button onClick={() => setEnvironmentOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20">
+              <Plus size={14} strokeWidth={2.5} /> <span className="hidden sm:inline">Create Environment</span><span className="sm:hidden">Create</span>
+            </button>
           </div>
         </header>
 
