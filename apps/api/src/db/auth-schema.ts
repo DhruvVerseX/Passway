@@ -2,6 +2,7 @@
   bigint,
   boolean,
   integer,
+  index,
   pgEnum,
   pgTable,
   text,
@@ -68,12 +69,25 @@ export const environmentName = pgEnum("environment_name", [
   "production",
 ]);
 
+export const environmentStatus = pgEnum("environment_status", [
+  "draft",
+  "hosted",
+  "disabled",
+]);
+
+export const runtimeTokenStatus = pgEnum("runtime_token_status", ["active", "revoked"]);
+
 export const auditResult = pgEnum("audit_result", ["allowed", "denied"]);
 export const auditAction = pgEnum("audit_action", [
   "SECRET_CREATED",
   "SECRET_READ",
   "SECRET_UPDATED",
   "SECRET_DELETED",
+  "ENVIRONMENT_HOSTED",
+  "RUNTIME_TOKEN_CREATED",
+  "RUNTIME_TOKEN_USED",
+  "RUNTIME_TOKEN_REVOKED",
+  "RUNTIME_SECRET_BUNDLE_READ",
 ]);
 
 export const workspace = pgTable(
@@ -114,6 +128,9 @@ export const environment = pgTable(
       .notNull()
       .references(() => project.id, { onDelete: "cascade" }),
     name: environmentName("name").notNull(),
+    status: environmentStatus("status").notNull().default("draft"),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    hostedAt: timestamp("hosted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -149,12 +166,18 @@ export const accessToken = pgTable("access_token", {
     .notNull()
     .references(() => environment.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull().unique(),
+  tokenHint: text("token_hint"),
   label: text("label").notNull(),
+  status: runtimeTokenStatus("status").notNull().default("active"),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   revoked: boolean("revoked").notNull().default(false),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  createdByUserId: text("created_by_user_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("access_token_environment_id_idx").on(table.environmentId)]);
 
 export const auditLog = pgTable("audit_log", {
   id: text("id").primaryKey(),
@@ -164,10 +187,13 @@ export const auditLog = pgTable("audit_log", {
   accessTokenId: text("access_token_id").references(() => accessToken.id, {
     onDelete: "set null",
   }),
-  secretKey: text("secret_key").notNull(),
+  actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
+  workspaceId: text("workspace_id").references(() => workspace.id, { onDelete: "set null" }),
+  projectId: text("project_id").references(() => project.id, { onDelete: "set null" }),
+  secretKey: text("secret_key"),
   ip: text("ip").notNull(),
   action: auditAction("action").notNull(),
   result: auditResult("result").notNull(),
   reason: text("reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("audit_log_environment_id_idx").on(table.environmentId)]);

@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 
-const PREFIX = "psw_live";
+const PREFIX = "ps_live";
 
 /**
- * Generates a bearer token in the form psw_live_<43 base64url chars>,
+ * Generates a bearer token in the form ps_live_<43 base64url chars>,
  * which is 256 bits of randomness — well above the 128-bit floor for
  * a bearer credential. The prefix is deliberate: it lets secret
  * scanners (GitHub, GitGuardian, etc.) recognize a leaked Passway
