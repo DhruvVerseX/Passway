@@ -1,38 +1,341 @@
 "use client";
 
-import { AlertTriangle, ArrowUpRight, Box, Check, CheckCircle2, Clipboard, MoreHorizontal, Plus, Search, Settings2, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Box,
+  Check,
+  CheckCircle2,
+  Clipboard,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
 import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-modal";
 
-type EnvironmentType = "Production" | "Development" | "Staging" | "Preview" | "Testing" | "CI/CD";
-type Environment = { id: string; name: string; type: EnvironmentType; description: string; secrets: number; tokens: number; status: "Healthy" | "Needs attention"; updated: string };
+type EnvironmentType =
+  "Production" | "Development" | "Staging" | "Preview" | "Testing" | "CI/CD";
+type Environment = {
+  id: string;
+  name: string;
+  type: EnvironmentType;
+  description: string;
+  secrets: number;
+  tokens: number;
+  status: "Healthy" | "Needs attention";
+  updated: string;
+};
 
 const initialEnvironments: Environment[] = [
-  { id: "amiworthy", name: "AmiWorthy", type: "Development", description: "Local development and feature work.", secrets: 12, tokens: 2, status: "Healthy", updated: "2 hours ago" },
-  { id: "viruj-health", name: "Viruj Health", type: "Production", description: "Live customer traffic and production services.", secrets: 18, tokens: 1, status: "Healthy", updated: "Yesterday" },
-  { id: "envvault-demo", name: "EnvVault Demo", type: "Preview", description: "Shared demo environment for product previews.", secrets: 6, tokens: 1, status: "Needs attention", updated: "3 days ago" },
-  { id: "creator-hackathon", name: "Creator Hackathon", type: "Testing", description: "Hackathon workspace and test credentials.", secrets: 4, tokens: 1, status: "Healthy", updated: "Just now" },
+  {
+    id: "amiworthy",
+    name: "AmiWorthy",
+    type: "Development",
+    description: "Local development and feature work.",
+    secrets: 12,
+    tokens: 2,
+    status: "Healthy",
+    updated: "2 hours ago",
+  },
+  {
+    id: "viruj-health",
+    name: "Viruj Health",
+    type: "Production",
+    description: "Live customer traffic and production services.",
+    secrets: 18,
+    tokens: 1,
+    status: "Healthy",
+    updated: "Yesterday",
+  },
+  {
+    id: "envvault-demo",
+    name: "EnvVault Demo",
+    type: "Preview",
+    description: "Shared demo environment for product previews.",
+    secrets: 6,
+    tokens: 1,
+    status: "Needs attention",
+    updated: "3 days ago",
+  },
+  {
+    id: "creator-hackathon",
+    name: "Creator Hackathon",
+    type: "Testing",
+    description: "Hackathon workspace and test credentials.",
+    secrets: 4,
+    tokens: 1,
+    status: "Healthy",
+    updated: "Just now",
+  },
 ];
 
-const typeTone: Record<EnvironmentType, string> = { Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300", Development: "border-sky-400/15 bg-sky-400/[0.07] text-sky-300", Staging: "border-amber-400/15 bg-amber-400/[0.07] text-amber-300", Preview: "border-violet-400/15 bg-violet-400/[0.07] text-violet-300", Testing: "border-blue-400/15 bg-blue-400/[0.07] text-blue-300", "CI/CD": "border-pink-400/15 bg-pink-400/[0.07] text-pink-300" };
+const typeTone: Record<EnvironmentType, string> = {
+  Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300",
+  Development: "border-sky-400/15 bg-sky-400/[0.07] text-sky-300",
+  Staging: "border-amber-400/15 bg-amber-400/[0.07] text-amber-300",
+  Preview: "border-violet-400/15 bg-violet-400/[0.07] text-violet-300",
+  Testing: "border-blue-400/15 bg-blue-400/[0.07] text-blue-300",
+  "CI/CD": "border-pink-400/15 bg-pink-400/[0.07] text-pink-300",
+};
 
 export default function EnvironmentsPage() {
   const [environments, setEnvironments] = useState(initialEnvironments);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const visible = useMemo(() => { const value = query.trim().toLowerCase(); return environments.filter((item) => !value || `${item.name} ${item.type} ${item.description}`.toLowerCase().includes(value)); }, [environments, query]);
-  const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(null), 2400); };
-  const copyLink = async (environment: Environment) => { const url = `${window.location.origin}/dashboard/${environment.id}`; try { await navigator.clipboard.writeText(url); } catch { /* embedded previews can block clipboard */ } notify("Dashboard link copied"); };
-  const remove = (environment: Environment) => { setEnvironments((current) => current.filter((item) => item.id !== environment.id)); notify(`${environment.name} removed from this workspace`); };
+  const visible = useMemo(() => {
+    const value = query.trim().toLowerCase();
+    return environments.filter(
+      (item) =>
+        !value ||
+        `${item.name} ${item.type} ${item.description}`
+          .toLowerCase()
+          .includes(value),
+    );
+  }, [environments, query]);
+  const notify = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 2400);
+  };
+  const copyLink = async (environment: Environment) => {
+    const url = `${window.location.origin}/dashboard/${environment.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      /* embedded previews can block clipboard */
+    }
+    notify("Dashboard link copied");
+  };
+  const remove = (environment: Environment) => {
+    setEnvironments((current) =>
+      current.filter((item) => item.id !== environment.id),
+    );
+    notify(`${environment.name} removed from this workspace`);
+  };
 
-  return <ControlPlaneShell active="Environments" title="Environments" showCreate={false}><EnvironmentOnboardingModal open={modalOpen} onClose={() => setModalOpen(false)} />{toast && <div className="fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-white/10 bg-[#191c17] px-4 py-3 text-sm font-medium shadow-2xl" role="status"><CheckCircle2 size={16} className="text-[#b9f55d]" /> {toast}</div>}
-    <div className="flex flex-col gap-5 border-b border-white/[0.07] pb-7 sm:flex-row sm:items-end sm:justify-between"><div><div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[#b9f55d]/80"><span className="h-2 w-2 rounded-full bg-[#b9f55d]" /> Workspace environments</div><h1 className="text-[30px] font-semibold tracking-[-0.045em] text-white sm:text-[34px]">Environments</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">Separate secrets, runtime access, and policies by the way your applications run.</p></div><button onClick={() => setModalOpen(true)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]"><Plus size={14} strokeWidth={2.5} /> Create Environment</button></div>
-    <section className="mt-6 grid gap-3 sm:grid-cols-3"><article className="rounded-2xl border border-[#b9f55d]/20 bg-[#b9f55d]/[0.055] p-5"><p className="text-[13px] font-medium text-white/45">Total environments</p><p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">{environments.length}</p><p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35"><span className="size-1.5 rounded-full bg-emerald-400" /> Across your workspace</p></article><article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5"><p className="text-[13px] font-medium text-white/45">Healthy</p><p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">{environments.filter((item) => item.status === "Healthy").length}</p><p className="mt-4 text-[11px] text-white/35">Ready for runtime access</p></article><article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5"><p className="text-[13px] font-medium text-white/45">Secrets in scope</p><p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">{environments.reduce((total, item) => total + item.secrets, 0)}</p><p className="mt-4 text-[11px] text-white/35">Protected across all environments</p></article></section>
-    <section className="mt-8"><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-base font-semibold tracking-[-0.02em] text-white/90">Your environments</h2><p className="mt-1 text-xs text-white/35">Open an environment to manage secrets, tokens, access, and activity.</p></div><label className="relative sm:w-64"><span className="sr-only">Search environments</span><Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/25" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search environments..." className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25 focus:border-white/20" /></label></div>
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.018]"><div className="hidden grid-cols-[1.35fr_1fr_1fr_.8fr_124px] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/25 lg:grid"><span>Environment</span><span>Type</span><span>Status</span><span>Secrets</span><span /></div>{visible.length ? visible.map((environment) => <article key={environment.id} className="group grid gap-4 border-b border-white/[0.055] px-4 py-4 last:border-0 sm:px-5 lg:grid-cols-[1.35fr_1fr_1fr_.8fr_124px] lg:items-center"><Link href={`/dashboard/${environment.id}`} className="flex min-w-0 items-start gap-3"><span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-white/40 transition group-hover:border-[#b9f55d]/20 group-hover:text-[#b9f55d]"><Box size={16} /></span><span className="min-w-0"><span className="flex items-center gap-2"><span className="truncate text-xs font-semibold text-white/80">{environment.name}</span><ArrowUpRight size={12} className="shrink-0 text-white/25 transition group-hover:text-[#b9f55d]" /></span><span className="mt-1 block truncate text-[10px] text-white/25">{environment.description}</span></span></Link><div><span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${typeTone[environment.type]}`}>{environment.type}</span></div><div><span className={`inline-flex items-center gap-1.5 text-[11px] ${environment.status === "Healthy" ? "text-emerald-300" : "text-amber-300"}`}><span className={`size-1.5 rounded-full ${environment.status === "Healthy" ? "bg-emerald-400" : "bg-amber-400"}`} />{environment.status}</span><span className="mt-1 block text-[10px] text-white/25">Updated {environment.updated}</span></div><div><span className="font-mono text-xs text-white/60">{environment.secrets}</span><span className="mt-1 block text-[10px] text-white/25">secrets · {environment.tokens} tokens</span></div><div className="flex items-center justify-end gap-1"><button onClick={() => copyLink(environment)} className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white" aria-label={`Copy ${environment.name} dashboard link`}><Clipboard size={14} /></button><button onClick={() => notify(`${environment.name} settings opened`)} className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-[#b9f55d]" aria-label={`Manage ${environment.name}`}><Settings2 size={14} /></button><button onClick={() => remove(environment)} className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300" aria-label={`Remove ${environment.name}`}><Trash2 size={14} /></button><button onClick={() => notify(`${environment.name} actions`)} className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white" aria-label={`More actions for ${environment.name}`}><MoreHorizontal size={16} /></button></div></article>) : <div className="grid place-items-center px-6 py-16 text-center"><span className="grid size-10 place-items-center rounded-xl border border-white/[0.07] text-white/25"><AlertTriangle size={16} /></span><p className="mt-3 text-sm font-medium text-white/60">No environments found</p><p className="mt-1 text-xs text-white/30">Try another search or create a new environment.</p></div>}</div>
-    </section><footer className="mt-8 flex flex-col gap-2 border-t border-white/[0.06] py-5 text-[10px] text-white/22 sm:flex-row sm:items-center sm:justify-between"><p>Each environment has its own encrypted values, tokens, and access policy.</p><span>{environments.length} environments in workspace</span></footer>
-  </ControlPlaneShell>;
+  return (
+    <ControlPlaneShell
+      active="Environments"
+      title="Environments"
+      showCreate={false}
+    >
+      <EnvironmentOnboardingModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
+      {toast && (
+        <div
+          className="fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-white/10 bg-[#191c17] px-4 py-3 text-sm font-medium shadow-2xl"
+          role="status"
+        >
+          <CheckCircle2 size={16} className="text-[#b9f55d]" /> {toast}
+        </div>
+      )}
+      <div className="flex flex-col gap-5 border-b border-white/[0.07] pb-7 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[#b9f55d]/80">
+            <span className="h-2 w-2 rounded-full bg-[#b9f55d]" /> Workspace
+            environments
+          </div>
+          <h1 className="text-[30px] font-semibold tracking-[-0.045em] text-white sm:text-[34px]">
+            Environments
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
+            Separate secrets, runtime access, and policies by the way your
+            applications run.
+          </p>
+        </div>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]"
+        >
+          <Plus size={14} strokeWidth={2.5} /> Create Environment
+        </button>
+      </div>
+      <section className="mt-6 grid gap-3 sm:grid-cols-3">
+        <article className="rounded-2xl border border-[#b9f55d]/20 bg-[#b9f55d]/[0.055] p-5">
+          <p className="text-[13px] font-medium text-white/45">
+            Total environments
+          </p>
+          <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+            {environments.length}
+          </p>
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
+            <span className="size-1.5 rounded-full bg-emerald-400" /> Across
+            your workspace
+          </p>
+        </article>
+        <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
+          <p className="text-[13px] font-medium text-white/45">Healthy</p>
+          <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+            {environments.filter((item) => item.status === "Healthy").length}
+          </p>
+          <p className="mt-4 text-[11px] text-white/35">
+            Ready for runtime access
+          </p>
+        </article>
+        <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
+          <p className="text-[13px] font-medium text-white/45">
+            Secrets in scope
+          </p>
+          <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
+            {environments.reduce((total, item) => total + item.secrets, 0)}
+          </p>
+          <p className="mt-4 text-[11px] text-white/35">
+            Protected across all environments
+          </p>
+        </article>
+      </section>
+      <section className="mt-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold tracking-[-0.02em] text-white/90">
+              Your environments
+            </h2>
+            <p className="mt-1 text-xs text-white/35">
+              Open an environment to manage secrets, tokens, access, and
+              activity.
+            </p>
+          </div>
+          <label className="relative sm:w-64">
+            <span className="sr-only">Search environments</span>
+            <Search
+              size={13}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/25"
+            />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search environments..."
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25 focus:border-white/20"
+            />
+          </label>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.018]">
+          <div className="hidden grid-cols-[1.35fr_1fr_1fr_.8fr_124px] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/25 lg:grid">
+            <span>Environment</span>
+            <span>Type</span>
+            <span>Status</span>
+            <span>Secrets</span>
+            <span />
+          </div>
+          {visible.length ? (
+            visible.map((environment) => (
+              <article
+                key={environment.id}
+                className="group grid gap-4 border-b border-white/[0.055] px-4 py-4 last:border-0 sm:px-5 lg:grid-cols-[1.35fr_1fr_1fr_.8fr_124px] lg:items-center"
+              >
+                <Link
+                  href={`/dashboard/${environment.id}`}
+                  className="flex min-w-0 items-start gap-3"
+                >
+                  <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-white/40 transition group-hover:border-[#b9f55d]/20 group-hover:text-[#b9f55d]">
+                    <Box size={16} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-xs font-semibold text-white/80">
+                        {environment.name}
+                      </span>
+                      <ArrowUpRight
+                        size={12}
+                        className="shrink-0 text-white/25 transition group-hover:text-[#b9f55d]"
+                      />
+                    </span>
+                    <span className="mt-1 block truncate text-[10px] text-white/25">
+                      {environment.description}
+                    </span>
+                  </span>
+                </Link>
+                <div>
+                  <span
+                    className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${typeTone[environment.type]}`}
+                  >
+                    {environment.type}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[11px] ${environment.status === "Healthy" ? "text-emerald-300" : "text-amber-300"}`}
+                  >
+                    <span
+                      className={`size-1.5 rounded-full ${environment.status === "Healthy" ? "bg-emerald-400" : "bg-amber-400"}`}
+                    />
+                    {environment.status}
+                  </span>
+                  <span className="mt-1 block text-[10px] text-white/25">
+                    Updated {environment.updated}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-mono text-xs text-white/60">
+                    {environment.secrets}
+                  </span>
+                  <span className="mt-1 block text-[10px] text-white/25">
+                    secrets · {environment.tokens} tokens
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    onClick={() => copyLink(environment)}
+                    className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white"
+                    aria-label={`Copy ${environment.name} dashboard link`}
+                  >
+                    <Clipboard size={14} />
+                  </button>
+                  <button
+                    onClick={() =>
+                      notify(`${environment.name} settings opened`)
+                    }
+                    className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-[#b9f55d]"
+                    aria-label={`Manage ${environment.name}`}
+                  >
+                    <Settings2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => remove(environment)}
+                    className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300"
+                    aria-label={`Remove ${environment.name}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => notify(`${environment.name} actions`)}
+                    className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white"
+                    aria-label={`More actions for ${environment.name}`}
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="grid place-items-center px-6 py-16 text-center">
+              <span className="grid size-10 place-items-center rounded-xl border border-white/[0.07] text-white/25">
+                <AlertTriangle size={16} />
+              </span>
+              <p className="mt-3 text-sm font-medium text-white/60">
+                No environments found
+              </p>
+              <p className="mt-1 text-xs text-white/30">
+                Try another search or create a new environment.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+      <footer className="mt-8 flex flex-col gap-2 border-t border-white/[0.06] py-5 text-[10px] text-white/22 sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          Each environment has its own encrypted values, tokens, and access
+          policy.
+        </p>
+        <span>{environments.length} environments in workspace</span>
+      </footer>
+    </ControlPlaneShell>
+  );
 }

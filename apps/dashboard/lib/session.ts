@@ -1,6 +1,11 @@
 ﻿import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { apiBaseURL, DEFAULT_AUTH_REDIRECT, safeCallbackURL, signInURL } from "@/lib/auth-ui";
+import {
+  apiBaseURL,
+  DEFAULT_AUTH_REDIRECT,
+  safeCallbackURL,
+  signInURL,
+} from "@/lib/auth-ui";
 
 type ApiSession = {
   user: {
@@ -44,4 +49,3 @@ export async function redirectAuthenticatedUsers() {
 export function redirectAfterAuth(value: string | null | undefined) {
   redirect(safeCallbackURL(value));
 }
-
