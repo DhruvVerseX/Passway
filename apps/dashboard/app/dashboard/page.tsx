@@ -98,7 +98,7 @@ const navigation = [
   { label: "Overview", icon: Gauge, active: true, href: "/dashboard" },
   { label: "SDK keys", icon: KeyRound, count: "3", href: "#" },
   { label: "Secrets", icon: LockKeyhole, count: "24", href: "/dashboard/secrets" },
-  { label: "Environments", icon: Box, href: "/dashboard/environments/new", modal: true },
+  { label: "Environments", icon: Box, href: "/dashboard/environments" },
   { label: "Access", icon: Users, href: "#" },
   { label: "Audit log", icon: Activity, href: "#" },
 ];
@@ -312,12 +312,7 @@ export default function PasswayDashboard() {
         <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Dashboard navigation">
           <p className="mb-2 px-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/25">Workspace</p>
           <div className="space-y-0.5">
-            {navigation.map((item) => item.modal ? (
-              <button key={item.label} onClick={() => setEnvironmentOpen(true)} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-xs font-medium text-white/42 transition hover:bg-white/[0.035] hover:text-white/75">
-                <item.icon size={15} strokeWidth={1.8} />
-                {item.label}
-              </button>
-            ) : (
+            {navigation.map((item) => (
               <Link key={item.label} href={item.href} className={`flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-xs font-medium transition ${item.active ? "bg-white/[0.065] text-white" : "text-white/42 hover:bg-white/[0.035] hover:text-white/75"}`}>
                 <item.icon size={15} strokeWidth={item.active ? 2.2 : 1.8} className={item.active ? "text-[#b9f55d]" : ""} />
                 {item.label}
