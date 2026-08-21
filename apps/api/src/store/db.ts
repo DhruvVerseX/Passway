@@ -8,6 +8,8 @@ export interface SecretRecord extends EncryptedSecret {
   project: string;
   environment: string;
   key: string;
+  description?: string;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +35,7 @@ export interface AuditRecord {
   environment: string;
   secretKey: string;
   ip: string;
+  action: "SECRET_CREATED" | "SECRET_READ" | "SECRET_UPDATED" | "SECRET_DELETED";
   result: "allowed" | "denied";
   reason?: string;
 }

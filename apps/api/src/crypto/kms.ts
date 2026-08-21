@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { SecretCryptoError } from "./errors.js";
 
 /**
  * Minimal KMS contract. In production this wraps a real key management
@@ -11,37 +12,91 @@ import crypto from "node:crypto";
  * client later requires no changes anywhere else in the codebase.
  */
 export interface Kms {
-  /** Wraps (encrypts) a raw data-encryption key. Returns base64. */
-  wrap(dataKey: Buffer): Promise<string>;
-  /** Unwraps (decrypts) a previously wrapped data-encryption key. */
-  unwrap(wrappedKey: string): Promise<Buffer>;
+  readonly activeKeyVersion: string;
+  /** Wraps a raw data-encryption key using the named master-key version. */
+  wrap(dataKey: Buffer, keyVersion: string): Promise<string>;
+  /** Unwraps a data-encryption key with the master-key version that created it. */
+  unwrap(wrappedKey: string, keyVersion: string): Promise<Buffer>;
 }
 
-const MASTER_KEY_ENV = "PASSWAY_MASTER_KEY";
+const ACTIVE_KEY_VERSION_ENV = "PASSWAY_ACTIVE_KEY_VERSION";
+const MASTER_KEYS_ENV = "PASSWAY_MASTER_KEYS";
+const LEGACY_MASTER_KEY_ENV = "PASSWAY_MASTER_KEY";
+const KEY_VERSION_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
+const WRAPPED_KEY_BYTES = 12 + 16 + 32;
 
-function loadMasterKey(): Buffer {
-  const fromEnv = process.env[MASTER_KEY_ENV];
-  if (fromEnv) {
-    const key = /^[0-9a-f]{64}$/i.test(fromEnv)
-      ? Buffer.from(fromEnv, "hex")
-      : Buffer.from(fromEnv, "base64");
-    if (key.length !== 32) {
-      throw new Error(
-        `${MASTER_KEY_ENV} must be a 32-byte base64 value or a 64-character hex value`
-      );
-    }
-    return key;
+interface Keyring {
+  activeKeyVersion: string;
+  keys: Map<string, Buffer>;
+}
+
+function fail(code: ConstructorParameters<typeof SecretCryptoError>[0]): never {
+  throw new SecretCryptoError(code);
+}
+
+function decodeKey(value: string): Buffer {
+  const isHex = /^[0-9a-f]{64}$/i.test(value);
+  const isBase64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value);
+  if (!isHex && !isBase64) return fail("KEY_UNAVAILABLE");
+
+  const key = Buffer.from(value, isHex ? "hex" : "base64");
+  if (key.length !== 32) {
+    key.fill(0);
+    return fail("KEY_UNAVAILABLE");
   }
-  // Dev-only fallback so the service boots without setup. Never do this
-  // in production — a restart would make every stored secret unrecoverable
-  // if this were the only place the key lived, and worse, a fixed key
-  // baked into source would be a real vulnerability. Always inject
-  // PASSWAY_MASTER_KEY from a real KMS/secrets manager in prod.
-  console.warn(
-    `[kms] ${MASTER_KEY_ENV} not set — generating an ephemeral dev-only master key. ` +
-      `Secrets will NOT survive a restart. Set ${MASTER_KEY_ENV} for anything real.`
-  );
-  return crypto.randomBytes(32);
+  return key;
+}
+
+function loadKeyring(): Keyring {
+  const activeKeyVersion = process.env[ACTIVE_KEY_VERSION_ENV] ?? "v1";
+  if (!KEY_VERSION_PATTERN.test(activeKeyVersion)) return fail("KEY_UNAVAILABLE");
+
+  const configured = process.env[MASTER_KEYS_ENV];
+  let rawKeys: Record<string, string>;
+  if (configured) {
+    try {
+      const parsed: unknown = JSON.parse(configured);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return fail("KEY_UNAVAILABLE");
+      }
+      rawKeys = {};
+      for (const [version, key] of Object.entries(parsed)) {
+        if (!KEY_VERSION_PATTERN.test(version) || typeof key !== "string") {
+          return fail("KEY_UNAVAILABLE");
+        }
+        rawKeys[version] = key;
+      }
+    } catch {
+      return fail("KEY_UNAVAILABLE");
+    }
+  } else {
+    const legacyKey = process.env[LEGACY_MASTER_KEY_ENV];
+    if (!legacyKey) return fail("KEY_UNAVAILABLE");
+    rawKeys = { [activeKeyVersion]: legacyKey };
+  }
+
+  const keys = new Map<string, Buffer>();
+  try {
+    for (const [version, key] of Object.entries(rawKeys)) {
+      if (!KEY_VERSION_PATTERN.test(version)) return fail("KEY_UNAVAILABLE");
+      keys.set(version, decodeKey(key));
+    }
+    if (!keys.has(activeKeyVersion)) return fail("KEY_UNAVAILABLE");
+    return { activeKeyVersion, keys };
+  } catch (error) {
+    for (const key of keys.values()) key.fill(0);
+    throw error;
+  }
+}
+
+function decodeBase64Url(value: string, expectedLength?: number): Buffer {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return fail("INVALID_PAYLOAD");
+  const decoded = Buffer.from(value, "base64url");
+  if (decoded.toString("base64url") !== value || (expectedLength && decoded.length !== expectedLength)) {
+    decoded.fill(0);
+    return fail("INVALID_PAYLOAD");
+  }
+  return decoded;
 }
 
 /**
@@ -51,25 +106,72 @@ function loadMasterKey(): Buffer {
  * hardware/HSM and never lets it leave, whereas here it's just an env var.
  */
 export class LocalKms implements Kms {
-  private masterKey = loadMasterKey();
-
-  async wrap(dataKey: Buffer): Promise<string> {
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv("aes-256-gcm", this.masterKey, iv);
-    const ciphertext = Buffer.concat([cipher.update(dataKey), cipher.final()]);
-    const authTag = cipher.getAuthTag();
-    // Pack iv | authTag | ciphertext into one base64 blob for storage.
-    return Buffer.concat([iv, authTag, ciphertext]).toString("base64");
+  get activeKeyVersion(): string {
+    const keyring = loadKeyring();
+    try {
+      return keyring.activeKeyVersion;
+    } finally {
+      for (const key of keyring.keys.values()) key.fill(0);
+    }
   }
 
-  async unwrap(wrappedKey: string): Promise<Buffer> {
-    const raw = Buffer.from(wrappedKey, "base64");
-    const iv = raw.subarray(0, 12);
-    const authTag = raw.subarray(12, 28);
-    const ciphertext = raw.subarray(28);
-    const decipher = crypto.createDecipheriv("aes-256-gcm", this.masterKey, iv);
-    decipher.setAuthTag(authTag);
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  async wrap(dataKey: Buffer, keyVersion: string): Promise<string> {
+    if (dataKey.length !== 32 || !KEY_VERSION_PATTERN.test(keyVersion)) {
+      return fail("ENCRYPTION_FAILED");
+    }
+
+    const keyring = loadKeyring();
+    const masterKey = keyring.keys.get(keyVersion);
+    if (!masterKey) {
+      for (const key of keyring.keys.values()) key.fill(0);
+      return fail("KEY_UNAVAILABLE");
+    }
+
+    try {
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv("aes-256-gcm", masterKey, iv);
+      const ciphertext = Buffer.concat([cipher.update(dataKey), cipher.final()]);
+      const authTag = cipher.getAuthTag();
+      return Buffer.concat([iv, authTag, ciphertext]).toString("base64url");
+    } catch {
+      return fail("ENCRYPTION_FAILED");
+    } finally {
+      for (const key of keyring.keys.values()) key.fill(0);
+    }
+  }
+
+  async unwrap(wrappedKey: string, keyVersion: string): Promise<Buffer> {
+    if (!KEY_VERSION_PATTERN.test(keyVersion)) return fail("KEY_UNAVAILABLE");
+
+    const keyring = loadKeyring();
+    const masterKey = keyring.keys.get(keyVersion);
+    if (!masterKey) {
+      for (const key of keyring.keys.values()) key.fill(0);
+      return fail("KEY_UNAVAILABLE");
+    }
+
+    let raw: Buffer | undefined;
+    try {
+      raw = decodeBase64Url(wrappedKey, WRAPPED_KEY_BYTES);
+      const decipher = crypto.createDecipheriv(
+        "aes-256-gcm",
+        masterKey,
+        raw.subarray(0, 12)
+      );
+      decipher.setAuthTag(raw.subarray(12, 28));
+      const dataKey = Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]);
+      if (dataKey.length !== 32) {
+        dataKey.fill(0);
+        return fail("DECRYPTION_FAILED");
+      }
+      return dataKey;
+    } catch (error) {
+      if (error instanceof SecretCryptoError) throw error;
+      return fail("DECRYPTION_FAILED");
+    } finally {
+      raw?.fill(0);
+      for (const key of keyring.keys.values()) key.fill(0);
+    }
   }
 }
 

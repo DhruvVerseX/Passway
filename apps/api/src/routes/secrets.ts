@@ -1,71 +1,97 @@
 import { Router } from "express";
 import { requireAdmin } from "../middleware/adminAuth.js";
 import { requireToken } from "../middleware/auth.js";
-import { encryptSecret, decryptSecret } from "../crypto/envelope.js";
-import { store, newId } from "../store/db.js";
+import { SecretInputError, secretService } from "../services/secret.service.js";
 import { logAudit } from "../services/auditLog.js";
+import { store } from "../store/db.js";
 
 export const secretsRouter = Router();
 
 /* ---------------- Admin: manage secrets from the dashboard ---------------- */
 
 secretsRouter.post("/admin/secrets", requireAdmin, async (req, res) => {
-  const { project, environment, key, value } = req.body ?? {};
-  if (!project || !environment || !key || typeof value !== "string") {
-    return res
-      .status(400)
-      .json({ error: "project, environment, key, value are all required" });
+  try {
+    const input = secretService.parseWriteInput(req.body);
+    const existing = secretService.getMetadata(input);
+    const secret = existing
+      ? await secretService.update(input)
+      : await secretService.create(input);
+    const action = existing ? "SECRET_UPDATED" : "SECRET_CREATED";
+    logAudit(req, {
+      token: undefined,
+      project: input.project,
+      environment: input.environment,
+      secretKey: input.key,
+      action,
+      result: "allowed",
+    });
+    return res.status(existing ? 200 : 201).json({ secret });
+  } catch (error) {
+    if (error instanceof SecretInputError) return res.status(400).json({ error: "invalid_secret_input" });
+    return res.status(500).json({ error: "secret_unavailable" });
   }
-
-  const enc = await encryptSecret(value);
-  const now = new Date().toISOString();
-  const existing = store.getSecret(project, environment, key);
-
-  store.putSecret({
-    id: existing?.id ?? newId(),
-    project,
-    environment,
-    key,
-    createdAt: existing?.createdAt ?? now,
-    updatedAt: now,
-    ...enc,
-  });
-
-  return res.status(201).json({ project, environment, key, updatedAt: now });
 });
 
 secretsRouter.get("/admin/secrets", requireAdmin, (req, res) => {
-  const { project, environment } = req.query;
-  if (typeof project !== "string" || typeof environment !== "string") {
-    return res.status(400).json({ error: "project and environment query params required" });
+  try {
+    const scope = secretService.parseScope(req.query);
+    return res.json({ secrets: secretService.list(scope) });
+  } catch (error) {
+    if (error instanceof SecretInputError) return res.status(400).json({ error: "invalid_secret_scope" });
+    return res.status(500).json({ error: "secret_unavailable" });
   }
-  const secrets = store.listSecrets(project, environment).map((s) => ({
-    key: s.key,
-    project: s.project,
-    environment: s.environment,
-    updatedAt: s.updatedAt,
-    // Deliberately never returned here: ciphertext, iv, authTag, wrappedDataKey.
-    // The admin list view shows metadata only — revealing a value is a
-    // separate, explicit action below, and still requires the admin key.
-  }));
-  return res.json({ secrets });
 });
 
 secretsRouter.post("/admin/secrets/:key/reveal", requireAdmin, async (req, res) => {
-  const { project, environment } = req.body ?? {};
-  const record = store.getSecret(project, environment, req.params.key);
-  if (!record) return res.status(404).json({ error: "not_found" });
-  const value = await decryptSecret(record);
-  return res.json({ key: record.key, value });
+  let scope: ReturnType<typeof secretService.parseScope> | undefined;
+  try {
+    scope = secretService.parseScope(req.body);
+    const secret = await secretService.getValue({ ...scope, key: req.params.key });
+    if (!secret) return res.status(404).json({ error: "not_found" });
+    logAudit(req, {
+      token: undefined,
+      project: scope.project,
+      environment: scope.environment,
+      secretKey: req.params.key,
+      action: "SECRET_READ",
+      result: "allowed",
+    });
+    return res.json({ key: secret.metadata.key, value: secret.value });
+  } catch (error) {
+    if (error instanceof SecretInputError) return res.status(400).json({ error: "invalid_secret_scope" });
+    if (scope) {
+      logAudit(req, {
+        token: undefined,
+        project: scope.project,
+        environment: scope.environment,
+        secretKey: req.params.key,
+        action: "SECRET_READ",
+        result: "denied",
+        reason: "secret_unavailable",
+      });
+    }
+    return res.status(500).json({ error: "secret_unavailable" });
+  }
 });
 
 secretsRouter.delete("/admin/secrets/:key", requireAdmin, (req, res) => {
-  const { project, environment } = req.query;
-  if (typeof project !== "string" || typeof environment !== "string") {
-    return res.status(400).json({ error: "project and environment query params required" });
+  try {
+    const scope = secretService.parseScope(req.query);
+    const secret = secretService.delete({ ...scope, key: req.params.key });
+    if (!secret) return res.status(404).json({ error: "not_found" });
+    logAudit(req, {
+      token: undefined,
+      project: scope.project,
+      environment: scope.environment,
+      secretKey: req.params.key,
+      action: "SECRET_DELETED",
+      result: "allowed",
+    });
+    return res.status(204).send();
+  } catch (error) {
+    if (error instanceof SecretInputError) return res.status(400).json({ error: "invalid_secret_scope" });
+    return res.status(500).json({ error: "secret_unavailable" });
   }
-  store.deleteSecret(project, environment, req.params.key);
-  return res.status(204).send();
 });
 
 /* ---------------- Runtime: what a consuming app actually calls ---------------- */
@@ -81,16 +107,19 @@ secretsRouter.get("/secrets/:key", requireToken, async (req, res) => {
   const { project, environment } = token;
   const key = req.params.key;
 
-  const record = store.getSecret(project, environment, key);
+  try {
+    const scope = secretService.parseScope({ project, environment });
+    const secret = await secretService.getValue({ ...scope, key });
+    if (!secret) {
+      logAudit(req, { token, project, environment, secretKey: key, action: "SECRET_READ", result: "denied", reason: "not_found" });
+      return res.status(404).json({ error: "secret_not_found" });
+    }
 
-  if (!record) {
-    logAudit(req, { token, project, environment, secretKey: key, result: "denied", reason: "not_found" });
-    return res.status(404).json({ error: "secret_not_found" });
+    store.touchTokenLastUsed(token.id);
+    logAudit(req, { token, project, environment, secretKey: key, action: "SECRET_READ", result: "allowed" });
+    return res.json({ key, value: secret.value });
+  } catch (error) {
+    logAudit(req, { token, project, environment, secretKey: key, action: "SECRET_READ", result: "denied", reason: "secret_unavailable" });
+    return res.status(500).json({ error: "secret_unavailable" });
   }
-
-  const value = await decryptSecret(record);
-  store.touchTokenLastUsed(token.id);
-  logAudit(req, { token, project, environment, secretKey: key, result: "allowed" });
-
-  return res.json({ key, value });
 });

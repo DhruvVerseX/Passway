@@ -8,6 +8,7 @@ export function logAudit(
     project: string;
     environment: string;
     secretKey: string;
+    action: "SECRET_CREATED" | "SECRET_READ" | "SECRET_UPDATED" | "SECRET_DELETED";
     result: "allowed" | "denied";
     reason?: string;
   }
@@ -21,6 +22,7 @@ export function logAudit(
     environment: opts.environment,
     secretKey: opts.secretKey,
     ip: req.ip ?? "unknown",
+    action: opts.action,
     result: opts.result,
     reason: opts.reason,
   });

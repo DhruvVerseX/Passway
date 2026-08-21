@@ -8,6 +8,20 @@
       "when": 1785839881604,
       "tag": "0000_lazy_valkyrie",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787304129822,
+      "tag": "0001_handy_payback",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787304631856,
+      "tag": "0002_fine_hitman",
+      "breakpoints": true
     }
   ]
 }
