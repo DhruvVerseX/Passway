@@ -35,54 +35,17 @@ type Environment = {
   updated: string;
 };
 
-const initialEnvironments: Environment[] = [
-  {
-    id: "amiworthy",
-    name: "AmiWorthy",
-    type: "Development",
-    description: "Local development and feature work.",
-    secrets: 12,
-    tokens: 2,
-    status: "Healthy",
-    updated: "2 hours ago",
-  },
-  {
-    id: "viruj-health",
-    name: "Viruj Health",
-    type: "Production",
-    description: "Live customer traffic and production services.",
-    secrets: 18,
-    tokens: 1,
-    status: "Healthy",
-    updated: "Yesterday",
-  },
-  {
-    id: "envvault-demo",
-    name: "EnvVault Demo",
-    type: "Preview",
-    description: "Shared demo environment for product previews.",
-    secrets: 6,
-    tokens: 1,
-    status: "Needs attention",
-    updated: "3 days ago",
-  },
-  {
-    id: "creator-hackathon",
-    name: "Creator Hackathon",
-    type: "Testing",
-    description: "Hackathon workspace and test credentials.",
-    secrets: 4,
-    tokens: 1,
-    status: "Healthy",
-    updated: "Just now",
-  },
-];
+const initialEnvironments: Environment[] = [];
 
 function fromApiEnvironment(item: ApiEnvironment): Environment {
   return {
     id: item.id,
     name: item.name,
-    type: item.type === "custom" ? "CI/CD" : (item.type.charAt(0).toUpperCase() + item.type.slice(1)) as EnvironmentType,
+    type:
+      item.type === "custom"
+        ? "CI/CD"
+        : ((item.type.charAt(0).toUpperCase() +
+            item.type.slice(1)) as EnvironmentType),
     description: item.description ?? "No description added.",
     secrets: 0,
     tokens: 0,
@@ -100,7 +63,9 @@ function readCreatedEnvironments(): Environment[] {
     if (!key?.startsWith("passway_environment_")) continue;
 
     try {
-      const value = JSON.parse(window.sessionStorage.getItem(key) ?? "null") as {
+      const value = JSON.parse(
+        window.sessionStorage.getItem(key) ?? "null",
+      ) as {
         slug?: string;
         name?: string;
         type?: EnvironmentType;
@@ -147,11 +112,11 @@ export default function EnvironmentsPage() {
       if (projectId) {
         try {
           const result = await listEnvironments(projectId);
-          if (active && result.environments.length) {
+          if (active) {
             setEnvironments(result.environments.map(fromApiEnvironment));
           }
         } catch {
-          // Keep the local fixture list visible when the API is unavailable.
+          // Keep session-created entries visible when the API is unavailable.
         }
       }
 
@@ -159,7 +124,9 @@ export default function EnvironmentsPage() {
       if (active && created.length) {
         setEnvironments((current) => [
           ...created,
-          ...current.filter((item) => !created.some((entry) => entry.id === item.id)),
+          ...current.filter(
+            (item) => !created.some((entry) => entry.id === item.id),
+          ),
         ]);
       }
     };
@@ -243,7 +210,6 @@ export default function EnvironmentsPage() {
       </div>
 
       <section className="mt-8">
-
         <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.018]">
           <div className="hidden grid-cols-[1.35fr_1fr_1fr_.8fr_124px] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/25 lg:grid">
             <span>Environment</span>
