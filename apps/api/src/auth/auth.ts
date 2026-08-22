@@ -18,6 +18,11 @@ export const auth = betterAuth({
     schema: authSchema,
   }),
   trustedOrigins: Array.from(getAllowedOrigins()),
+  session: {
+    // Keep the server session alive so the browser can restore the login after it is reopened.
+    expiresIn: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60 * 24,
+  },
   emailAndPassword: {
     enabled: true,
     autoSignIn: false,
@@ -85,6 +90,12 @@ export const auth = betterAuth({
     },
   },
   advanced: {
+    defaultCookieAttributes: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProduction,
+      path: "/",
+    },
     cookiePrefix: "passway",
     useSecureCookies: isProduction,
     crossSubDomainCookies: isProduction

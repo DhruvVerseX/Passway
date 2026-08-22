@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Github, LockKeyhole, Mail, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
 const dashboardBase = process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001";
@@ -23,6 +23,20 @@ export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState<"email" | "google" | "github" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    authClient.getSession().then(({ data }) => {
+      if (active && data?.user) window.location.assign(callbackURL());
+    }).catch(() => {
+      // A missing or expired session should leave the login form available.
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const continueWith = async (provider: "google" | "github") => {
     setLoading(provider);
@@ -99,7 +113,7 @@ export default function LoginPage() {
               <div className="flex items-center justify-between"><span /><a href="/auth/reset-password" className="mb-2 text-[11px] font-medium text-[#b9f55d]/70 transition hover:text-[#b9f55d]">Forgot password?</a></div>
               <label className="block"><span className="mb-2 block text-[12px] font-medium text-white/65">Password</span><span className="group relative block"><span className="pointer-events-none absolute inset-y-0 left-3.5 grid place-items-center text-white/25 transition group-focus-within:text-[#b9f55d]/70"><LockKeyhole size={15} /></span><input required name="password" type={passwordVisible ? "text" : "password"} placeholder="Enter your password" autoComplete="current-password" className="auth-input" /><button type="button" onClick={() => setPasswordVisible((value) => !value)} className="absolute inset-y-0 right-3 grid place-items-center px-1 text-white/30 transition hover:text-white/70" aria-label={passwordVisible ? "Hide password" : "Show password"}>{passwordVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></span></label>
             </div>
-            <label className="flex items-center gap-2.5 text-[11px] text-white/40"><input name="rememberMe" type="checkbox" className="h-3.5 w-3.5 accent-[#b9f55d]" /> Keep me signed in</label>
+            <label className="flex items-center gap-2.5 text-[11px] text-white/40"><input defaultChecked name="rememberMe" type="checkbox" className="h-3.5 w-3.5 accent-[#b9f55d]" /> Keep me signed in for 30 days</label>
             {errorMessage && <p role="alert" className="text-xs text-red-300">{errorMessage}</p>}
             <button type="submit" disabled={loading !== null} className="auth-submit">{loading === "email" ? <RefreshCw size={15} className="animate-spin" /> : <>Sign in securely<ArrowRight size={15} strokeWidth={2.5} /></>}</button>
           </form>
