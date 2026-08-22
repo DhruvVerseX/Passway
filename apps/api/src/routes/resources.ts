@@ -51,49 +51,66 @@ resourcesRouter.post("/bootstrap", requireAuth, async (req, res) => {
     .limit(1);
   if (existing) return res.json({ project: existing, created: false });
 
-  const result = await db.transaction(async (tx) => {
-    const now = new Date();
-    const [createdWorkspace] = await tx
-      .insert(workspace)
-      .values({
-        id: crypto.randomUUID(),
-        ownerUserId: req.passwayUser!.id,
-        name: "Passway Workspace",
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-    const [createdProject] = await tx
-      .insert(project)
-      .values({
-        id: crypto.randomUUID(),
-        workspaceId: createdWorkspace.id,
-        name: "Primary Project",
-        description: "Your first Passway project.",
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-    const [development] = await tx
-      .insert(environment)
-      .values({
-        id: crypto.randomUUID(),
-        projectId: createdProject.id,
-        name: "development",
-        type: "development",
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-    return {
-      workspace: createdWorkspace,
-      project: createdProject,
-      environment: environmentMetadata(development),
-      created: true,
-    };
-  });
+  try {
+    const result = await db.transaction(async (tx) => {
+      const now = new Date();
+      const [createdWorkspace] = await tx
+        .insert(workspace)
+        .values({
+          id: crypto.randomUUID(),
+          ownerUserId: req.passwayUser!.id,
+          name: "Passway Workspace",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      const [createdProject] = await tx
+        .insert(project)
+        .values({
+          id: crypto.randomUUID(),
+          workspaceId: createdWorkspace.id,
+          name: "Primary Project",
+          description: "Your first Passway project.",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      const [development] = await tx
+        .insert(environment)
+        .values({
+          id: crypto.randomUUID(),
+          projectId: createdProject.id,
+          name: "development",
+          type: "development",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return {
+        workspace: createdWorkspace,
+        project: createdProject,
+        environment: environmentMetadata(development),
+        created: true,
+      };
+    });
 
-  return res.status(201).json(result);
+    return res.status(201).json(result);
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? String(error.code)
+        : "";
+    if (["42703", "42P01", "42710"].includes(code)) {
+      return res.status(503).json({
+        error:
+          "Passway database migration is required. Run `bun run --cwd apps/api db:migrate` and restart the API.",
+      });
+    }
+    console.error("Passway bootstrap failed", error);
+    return res
+      .status(500)
+      .json({ error: "Unable to initialize the Passway workspace." });
+  }
 });
 
 resourcesRouter.post("/workspaces", requireAuth, async (req, res) => {
