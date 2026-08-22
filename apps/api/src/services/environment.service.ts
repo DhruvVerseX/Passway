@@ -143,6 +143,18 @@ export async function listEnvironments(projectId: string, userId: string) {
   return records.map(environmentMetadata);
 }
 
+export async function deleteEnvironment(environmentId: string, userId: string) {
+  const current = await getOwnedEnvironment(environmentId, userId);
+  if (!current) return false;
+
+  const deleted = await db
+    .delete(environment)
+    .where(eq(environment.id, environmentId))
+    .returning({ id: environment.id });
+
+  return deleted.length > 0;
+}
+
 export async function lockEnvironment(
   environmentId: string,
   userId: string,

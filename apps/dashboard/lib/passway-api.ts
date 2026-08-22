@@ -102,6 +102,13 @@ export function listEnvironments(projectId: string) {
   );
 }
 
+export function deleteEnvironment(environmentId: string) {
+  return request<void>(
+    `/v1/environments/${encodeURIComponent(environmentId)}`,
+    { method: "DELETE" },
+  );
+}
+
 export function createSecret(
   environmentId: string,
   input: { key: string; value: string },

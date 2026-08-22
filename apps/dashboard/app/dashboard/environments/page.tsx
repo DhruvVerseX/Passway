@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
 import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-modal";
 import {
+  deleteEnvironment,
   listEnvironments,
   resolveProjectId,
   type ApiEnvironment,
@@ -35,8 +36,6 @@ type Environment = {
   updated: string;
 };
 
-const initialEnvironments: Environment[] = [];
-
 function fromApiEnvironment(item: ApiEnvironment): Environment {
   return {
     id: item.id,
@@ -54,44 +53,6 @@ function fromApiEnvironment(item: ApiEnvironment): Environment {
   };
 }
 
-function readCreatedEnvironments(): Environment[] {
-  if (typeof window === "undefined") return [];
-
-  const created: Environment[] = [];
-  for (let index = 0; index < window.sessionStorage.length; index += 1) {
-    const key = window.sessionStorage.key(index);
-    if (!key?.startsWith("passway_environment_")) continue;
-
-    try {
-      const value = JSON.parse(
-        window.sessionStorage.getItem(key) ?? "null",
-      ) as {
-        slug?: string;
-        name?: string;
-        type?: EnvironmentType;
-        description?: string;
-        secrets?: unknown[];
-      } | null;
-
-      if (!value?.slug || !value.name || !value.type) continue;
-      created.push({
-        id: value.slug,
-        name: value.name,
-        type: value.type,
-        description: value.description ?? "",
-        secrets: Array.isArray(value.secrets) ? value.secrets.length : 0,
-        tokens: 0,
-        status: "Healthy",
-        updated: "Just now",
-      });
-    } catch {
-      // Ignore malformed session entries and keep the list usable.
-    }
-  }
-
-  return created;
-}
-
 const typeTone: Record<EnvironmentType, string> = {
   Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300",
   Development: "border-sky-400/15 bg-sky-400/[0.07] text-sky-300",
@@ -102,33 +63,39 @@ const typeTone: Record<EnvironmentType, string> = {
 };
 
 export default function EnvironmentsPage() {
-  const [environments, setEnvironments] = useState(initialEnvironments);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
-      const projectId = await resolveProjectId();
-      if (projectId) {
-        try {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const projectId = await resolveProjectId();
+        if (projectId) {
           const result = await listEnvironments(projectId);
           if (active) {
             setEnvironments(result.environments.map(fromApiEnvironment));
           }
-        } catch {
-          // Keep session-created entries visible when the API is unavailable.
+        }
+      } catch (error) {
+        if (active) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load environments from Passway.",
+          );
         }
       }
 
-      const created = readCreatedEnvironments();
-      if (active && created.length) {
-        setEnvironments((current) => [
-          ...created,
-          ...current.filter(
-            (item) => !created.some((entry) => entry.id === item.id),
-          ),
-        ]);
-      }
+      if (active) setIsLoading(false);
     };
 
     void load();
@@ -136,9 +103,6 @@ export default function EnvironmentsPage() {
       active = false;
     };
   }, []);
-  const [query, setQuery] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const visible = useMemo(() => {
     const value = query.trim().toLowerCase();
     return environments.filter(
@@ -162,11 +126,26 @@ export default function EnvironmentsPage() {
     }
     notify("Dashboard link copied");
   };
-  const remove = (environment: Environment) => {
-    setEnvironments((current) =>
-      current.filter((item) => item.id !== environment.id),
-    );
-    notify(`${environment.name} removed from this workspace`);
+  const remove = async (environment: Environment) => {
+    if (removingId) return;
+    setRemovingId(environment.id);
+
+    try {
+      await deleteEnvironment(environment.id);
+      window.sessionStorage.removeItem(`passway_environment_${environment.id}`);
+      setEnvironments((current) =>
+        current.filter((item) => item.id !== environment.id),
+      );
+      notify(`${environment.name} removed from this workspace`);
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : `Unable to remove ${environment.name}`,
+      );
+    } finally {
+      setRemovingId(null);
+    }
   };
 
   return (
@@ -218,7 +197,31 @@ export default function EnvironmentsPage() {
             <span>Secrets</span>
             <span />
           </div>
-          {visible.length ? (
+          {isLoading ? (
+            <div
+              className="divide-y divide-white/[0.055]"
+              aria-label="Loading environments"
+            >
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="grid gap-4 px-4 py-5 sm:px-5 lg:grid-cols-[1.35fr_1fr_1fr_.8fr_124px] lg:items-center"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="size-9 animate-pulse rounded-xl bg-white/[0.06]" />
+                    <span className="space-y-2">
+                      <span className="block h-2.5 w-32 animate-pulse rounded bg-white/[0.07]" />
+                      <span className="block h-2 w-48 animate-pulse rounded bg-white/[0.04]" />
+                    </span>
+                  </div>
+                  <span className="h-6 w-20 animate-pulse rounded-md bg-white/[0.05]" />
+                  <span className="h-3 w-24 animate-pulse rounded bg-white/[0.05]" />
+                  <span className="h-3 w-16 animate-pulse rounded bg-white/[0.05]" />
+                  <span />
+                </div>
+              ))}
+            </div>
+          ) : visible.length ? (
             visible.map((environment) => (
               <article
                 key={environment.id}
@@ -282,18 +285,17 @@ export default function EnvironmentsPage() {
                   >
                     <Clipboard size={14} />
                   </button>
-                  <button
-                    onClick={() =>
-                      notify(`${environment.name} settings opened`)
-                    }
+                  <Link
+                    href={`/dashboard/${environment.id}`}
                     className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-[#b9f55d]"
                     aria-label={`Manage ${environment.name}`}
                   >
                     <Settings2 size={14} />
-                  </button>
+                  </Link>
                   <button
-                    onClick={() => remove(environment)}
-                    className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300"
+                    onClick={() => void remove(environment)}
+                    disabled={removingId === environment.id}
+                    className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300 disabled:cursor-wait disabled:opacity-50"
                     aria-label={`Remove ${environment.name}`}
                   >
                     <Trash2 size={14} />
@@ -314,10 +316,13 @@ export default function EnvironmentsPage() {
                 <AlertTriangle size={16} />
               </span>
               <p className="mt-3 text-sm font-medium text-white/60">
-                No environments found
+                {loadError
+                  ? "Unable to load environments"
+                  : "No environments found"}
               </p>
-              <p className="mt-1 text-xs text-white/30">
-                Try another search or create a new environment.
+              <p className="mt-1 max-w-md text-xs text-white/30">
+                {loadError ??
+                  "Create an environment to start managing encrypted secrets and runtime access."}
               </p>
             </div>
           )}

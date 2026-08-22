@@ -5,6 +5,7 @@ import {
   hostEnvironment,
 } from "../services/environment-hosting.service.js";
 import {
+  deleteEnvironment,
   EnvironmentServiceError,
   lockEnvironment,
 } from "../services/environment.service.js";
@@ -15,6 +16,19 @@ import {
 } from "../services/runtime-token.service.js";
 
 export const environmentsRouter = Router();
+
+environmentsRouter.delete(
+  "/environments/:environmentId",
+  requireAuth,
+  async (req, res) => {
+    const deleted = await deleteEnvironment(
+      req.params.environmentId,
+      req.passwayUser!.id,
+    );
+    if (!deleted) return res.status(404).json({ error: "Not found" });
+    return res.status(204).send();
+  },
+);
 
 environmentsRouter.post(
   "/environments/:environmentId/lock",
