@@ -21,8 +21,8 @@ import { useRouter } from "next/navigation";
 import {
   createEnvironment,
   createSecret,
-  getConfiguredProjectId,
   hostEnvironment,
+  resolveProjectId,
   importEnv,
   PasswayApiError,
 } from "@/lib/passway-api";
@@ -158,14 +158,13 @@ export function EnvironmentOnboardingModal({
       return;
     }
 
-    const projectId = getConfiguredProjectId();
-    if (!projectId) {
-      setError("Set NEXT_PUBLIC_PASSWAY_PROJECT_ID before creating an environment.");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
+      const projectId = await resolveProjectId();
+      if (!projectId) {
+        setError("No owned Passway project was found for this account.");
+        return;
+      }
       const environment = await createEnvironment(projectId, {
         name: name.trim(),
         type: type === "CI/CD" ? "custom" : (type.toLowerCase() as "development" | "preview" | "staging" | "production" | "custom"),

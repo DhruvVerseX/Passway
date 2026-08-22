@@ -28,6 +28,20 @@ const projectSchema = z.object({
 
 export const resourcesRouter = Router();
 
+resourcesRouter.get("/projects", requireAuth, async (req, res) => {
+  const projects = await db
+    .select({
+      id: project.id,
+      workspaceId: project.workspaceId,
+      name: project.name,
+      description: project.description,
+    })
+    .from(project)
+    .innerJoin(workspace, eq(project.workspaceId, workspace.id))
+    .where(eq(workspace.ownerUserId, req.passwayUser!.id));
+  return res.json({ projects });
+});
+
 resourcesRouter.post("/workspaces", requireAuth, async (req, res) => {
   const input = workspaceSchema.safeParse(req.body);
   if (!input.success)

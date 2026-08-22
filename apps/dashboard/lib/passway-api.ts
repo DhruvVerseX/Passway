@@ -1,5 +1,12 @@
 import { apiBaseURL } from "./auth-ui";
 
+export type ApiProject = {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+};
+
 export type ApiEnvironment = {
   id: string;
   projectId: string;
@@ -136,5 +143,18 @@ export function hostEnvironment(environmentId: string) {
 }
 
 export function getConfiguredProjectId() {
-  return process.env.NEXT_PUBLIC_PASSWAY_PROJECT_ID ?? "";
+  const configured = process.env.NEXT_PUBLIC_PASSWAY_PROJECT_ID?.trim() ?? "";
+  return configured && configured !== "your-project-id" ? configured : "";
+}
+
+export function listProjects() {
+  return request<{ projects: ApiProject[] }>("/v1/projects");
+}
+
+export async function resolveProjectId() {
+  const configured = getConfiguredProjectId();
+  if (configured) return configured;
+
+  const result = await listProjects();
+  return result.projects[0]?.id ?? "";
 }

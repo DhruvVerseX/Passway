@@ -17,8 +17,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
 import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-modal";
 import {
-  getConfiguredProjectId,
   listEnvironments,
+  resolveProjectId,
   type ApiEnvironment,
 } from "@/lib/passway-api";
 
@@ -143,7 +143,7 @@ export default function EnvironmentsPage() {
     let active = true;
 
     const load = async () => {
-      const projectId = getConfiguredProjectId();
+      const projectId = await resolveProjectId();
       if (projectId) {
         try {
           const result = await listEnvironments(projectId);
