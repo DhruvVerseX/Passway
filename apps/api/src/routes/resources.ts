@@ -1,14 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { environment, project, workspace } from "../db/auth-schema.js";
+import { project, workspace } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import {
   createEnvironment,
   EnvironmentInputError,
   EnvironmentServiceError,
-  environmentMetadata,
   listEnvironments,
   parseEnvironmentInput,
 } from "../services/environment.service.js";
@@ -75,21 +74,9 @@ resourcesRouter.post("/bootstrap", requireAuth, async (req, res) => {
           updatedAt: now,
         })
         .returning();
-      const [development] = await tx
-        .insert(environment)
-        .values({
-          id: crypto.randomUUID(),
-          projectId: createdProject.id,
-          name: "development",
-          type: "development",
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning();
       return {
         workspace: createdWorkspace,
         project: createdProject,
-        environment: environmentMetadata(development),
         created: true,
       };
     });
@@ -154,35 +141,18 @@ resourcesRouter.post(
     if (!owned) return res.status(404).json({ error: "Not found" });
 
     try {
-      const result = await db.transaction(async (tx) => {
-        const now = new Date();
-        const [created] = await tx
-          .insert(project)
-          .values({
-            id: crypto.randomUUID(),
-            workspaceId: owned.id,
-            ...input.data,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .returning();
-        const [development] = await tx
-          .insert(environment)
-          .values({
-            id: crypto.randomUUID(),
-            projectId: created.id,
-            name: "development",
-            type: "development",
-            createdAt: now,
-            updatedAt: now,
-          })
-          .returning();
-        return {
-          project: created,
-          environment: environmentMetadata(development),
-        };
-      });
-      return res.status(201).json(result);
+      const now = new Date();
+      const [created] = await db
+        .insert(project)
+        .values({
+          id: crypto.randomUUID(),
+          workspaceId: owned.id,
+          ...input.data,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return res.status(201).json({ project: created });
     } catch {
       return res.status(409).json({ error: "Project already exists" });
     }
