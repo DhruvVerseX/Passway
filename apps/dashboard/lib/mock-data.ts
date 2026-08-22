@@ -24,22 +24,13 @@ export const projects = [
 
 export const secrets: Array<{ key: string; updated: string }> = [];
 
-export const tokens = [
-  {
-    id: "tok_01",
-    value: "evt_dev_abcd••••••••••••wxyz",
-    label: "Local development",
-    created: "Jul 22, 2026",
-    lastUsed: "8 minutes ago",
-  },
-  {
-    id: "tok_02",
-    value: "evt_live_qwer••••••••••••tyui",
-    label: "Production runtime",
-    created: "Jul 10, 2026",
-    lastUsed: "2 hours ago",
-  },
-];
+export const tokens: Array<{
+  id: string;
+  value: string;
+  label: string;
+  created: string;
+  lastUsed: string;
+}> = [];
 
 export const logs = [
   {
