@@ -103,7 +103,7 @@ const navigation = [
     count: "24",
     href: "/dashboard/secrets",
   },
-  { label: "Environments", icon: Box, href: "/dashboard/environments" },
+  { label: "Apps", icon: Box, href: "/dashboard/environments" },
   { label: "Access", icon: Users, href: "#" },
   { label: "Audit log", icon: Activity, href: "#" },
 ];
@@ -523,14 +523,14 @@ export default function PasswayDashboard() {
               onClick={() => setEnvironmentOpen(true)}
               className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.09] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.04] hover:text-white sm:inline-flex"
             >
-              <Box size={14} /> New environment
+              <Box size={14} /> New app
             </button>
             <button
               onClick={() => setEnvironmentOpen(true)}
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"
             >
               <Plus size={14} strokeWidth={2.5} />{" "}
-              <span className="hidden sm:inline">Create Environment</span>
+              <span className="hidden sm:inline">Create App</span>
               <span className="sm:hidden">Create</span>
             </button>
           </div>
