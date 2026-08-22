@@ -76,13 +76,13 @@ function formatName(slug: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
-function fromApiSecret(item: ApiSecret): Secret {
+function fromApiSecret(item: ApiSecret, locked: boolean): Secret {
   return {
     id: item.id,
     key: item.key,
     value: "",
     updated: new Date(item.updatedAt).toLocaleDateString(),
-    locked: true,
+    locked,
   };
 }
 
@@ -332,7 +332,8 @@ export default function EnvironmentDashboard() {
           status: matched.status,
         });
         const result = await listSecrets(matched.id);
-        if (active) setSecrets(result.secrets.map(fromApiSecret));
+        const secretsLocked = matched.status === "locked" || matched.status === "hosted";
+        if (active) setSecrets(result.secrets.map((item) => fromApiSecret(item, secretsLocked)));
       } catch (error) {
         if (active) {
           setLoadError(
@@ -398,7 +399,8 @@ export default function EnvironmentDashboard() {
         }
       }
       const result = await listSecrets(environmentId);
-      setSecrets(result.secrets.map(fromApiSecret));
+      const secretsLocked = currentEnvironment.status === "locked" || currentEnvironment.status === "hosted";
+      setSecrets(result.secrets.map((item) => fromApiSecret(item, secretsLocked)));
       setModalOpen(false);
       notify(
         `${items.length} secret${items.length === 1 ? "" : "s"} encrypted`,
