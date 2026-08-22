@@ -65,6 +65,13 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/cli": {
+      "name": "@passway/cli",
+      "version": "0.1.0",
+      "bin": {
+        "passway": "./dist/index.js",
+      },
+    },
   },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
@@ -238,6 +245,8 @@
     "@passway/api": ["@passway/api@workspace:apps/api"],
 
     "@passway/app": ["@passway/app@workspace:apps/dashboard"],
+
+    "@passway/cli": ["@passway/cli@workspace:packages/cli"],
 
     "@passway/web": ["@passway/web@workspace:apps/web"],
 
