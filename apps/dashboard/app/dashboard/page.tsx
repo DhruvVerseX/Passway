@@ -807,12 +807,13 @@ export default function PasswayDashboard() {
                         last 30 days
                       </p>
                     </div>
-                    <button
+                    <Link
+                      href={`/dashboard/${key.environment.toLowerCase()}`}
                       className="grid h-8 w-8 place-items-center rounded-lg text-white/25 transition hover:bg-white/[0.05] hover:text-white"
-                      aria-label={`More actions for ${key.name}`}
+                      aria-label={`Open ${key.environment} environment for ${key.name}`}
                     >
                       <Ellipsis size={16} />
-                    </button>
+                    </Link>
                   </article>
                 ))
               ) : (

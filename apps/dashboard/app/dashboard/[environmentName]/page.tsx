@@ -296,6 +296,7 @@ export default function EnvironmentDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Secrets");
+  const [openSecretActionsId, setOpenSecretActionsId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -485,6 +486,20 @@ export default function EnvironmentDashboard() {
     }
   };
 
+  const lock = async () => {
+    if (!environmentId || !backendEnvironment || backendEnvironment.status !== "draft") return;
+    setIsSaving(true);
+    try {
+      const result = await lockEnvironment(environmentId);
+      setBackendEnvironment((current) => current ? { ...current, status: result.environment.status } : current);
+      notify("Environment locked for hosting");
+    } catch (error) {
+      notify(error instanceof PasswayApiError ? error.message : "Unable to lock environment");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const host = async () => {
     if (!environmentId) {
       notify("Connect this environment to the Passway API first");
@@ -562,6 +577,15 @@ export default function EnvironmentDashboard() {
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] px-3 text-xs font-medium text-[#b9f55d] transition hover:bg-[#b9f55d]/[0.1] disabled:opacity-50"
             >
               <Settings2 size={14} /> Rotate runtime token
+            </button>
+          )}
+          {backendEnvironment?.status === "draft" && (
+            <button
+              onClick={() => void lock()}
+              disabled={isSaving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] px-3 text-xs font-medium text-amber-200/80 transition hover:bg-amber-300/[0.1] disabled:opacity-50"
+            >
+              <LockKeyhole size={14} /> Lock environment
             </button>
           )}
           {backendEnvironment &&
@@ -790,27 +814,38 @@ export default function EnvironmentDashboard() {
                       </div>
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() =>
-                            notify(`${secret.key} rotation queued`)
-                          }
+                          onClick={() => void copyValue(secret)}
                           className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-[#b9f55d]"
-                          aria-label={`Rotate ${secret.key}`}
+                          aria-label={`Copy ${secret.key}`}
                         >
-                          <Settings2 size={14} />
+                          <Clipboard size={14} />
                         </button>
                         <button
-                          onClick={() => remove(secret.id)}
-                          className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300"
+                          onClick={() => void remove(secret.id)}
+                          disabled={isSaving || secret.locked}
+                          className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-red-400/10 hover:text-red-300 disabled:opacity-40"
                           aria-label={`Delete ${secret.key}`}
                         >
                           <Trash2 size={14} />
                         </button>
-                        <button
-                          className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white"
-                          aria-label={`More actions for ${secret.key}`}
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => setOpenSecretActionsId((current) => current === secret.id ? null : secret.id)}
+                            className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white"
+                            aria-label={`More actions for ${secret.key}`}
+                            aria-haspopup="menu"
+                            aria-expanded={openSecretActionsId === secret.id}
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
+                          {openSecretActionsId === secret.id && (
+                            <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-xl border border-white/10 bg-[#171b14] p-1 shadow-2xl" role="menu">
+                              <button onClick={() => { setOpenSecretActionsId(null); setRevealed((current) => current.includes(secret.id) ? current.filter((id) => id !== secret.id) : [...current, secret.id]); }} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">{isRevealed ? "Hide value" : "Reveal value"}</button>
+                              <button onClick={() => { setOpenSecretActionsId(null); void copyValue(secret); }} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Copy value</button>
+                              <button onClick={() => { setOpenSecretActionsId(null); void remove(secret.id); }} disabled={isSaving || secret.locked} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-red-300/80 hover:bg-red-400/10 hover:text-red-200 disabled:opacity-40" role="menuitem">Delete secret</button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </article>
                   );
@@ -852,7 +887,7 @@ export default function EnvironmentDashboard() {
             configuration step.
           </p>
           <button
-            onClick={() => notify(`${activeTab} configuration coming next`)}
+            onClick={() => setActiveTab("Settings")}
             className="mt-5 inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.09] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white"
           >
             Open settings <ChevronDown size={13} className="-rotate-90" />

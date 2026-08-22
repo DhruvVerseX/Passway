@@ -6,6 +6,7 @@ import {
   Box,
   CheckCircle2,
   Clipboard,
+  LockKeyhole,
   MoreHorizontal,
   Plus,
   Search,
@@ -19,6 +20,7 @@ import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-
 import {
   deleteEnvironment,
   listEnvironments,
+  lockEnvironment,
   resolveProjectId,
   type ApiEnvironment,
 } from "@/lib/passway-api";
@@ -33,6 +35,7 @@ type Environment = {
   secrets: number;
   tokens: number;
   status: "Healthy" | "Needs attention";
+  apiStatus: ApiEnvironment["status"];
   updated: string;
 };
 
@@ -49,6 +52,7 @@ function fromApiEnvironment(item: ApiEnvironment): Environment {
     secrets: 0,
     tokens: 0,
     status: item.status === "disabled" ? "Needs attention" : "Healthy",
+    apiStatus: item.status,
     updated: new Date(item.updatedAt).toLocaleDateString(),
   };
 }
@@ -70,6 +74,8 @@ export default function EnvironmentsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [lockingId, setLockingId] = useState<string | null>(null);
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -125,6 +131,26 @@ export default function EnvironmentsPage() {
       /* embedded previews can block clipboard */
     }
     notify("Dashboard link copied");
+  };
+  const lock = async (environment: Environment) => {
+    if (lockingId) return;
+    setLockingId(environment.id);
+    setOpenActionsId(null);
+    try {
+      const result = await lockEnvironment(environment.id);
+      setEnvironments((current) =>
+        current.map((item) =>
+          item.id === environment.id
+            ? { ...item, apiStatus: result.environment.status, status: "Healthy" }
+            : item,
+        ),
+      );
+      notify(`${environment.name} locked for hosting`);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : `Unable to lock ${environment.name}`);
+    } finally {
+      setLockingId(null);
+    }
   };
   const remove = async (environment: Environment) => {
     if (removingId) return;
@@ -300,13 +326,27 @@ export default function EnvironmentsPage() {
                   >
                     <Trash2 size={14} />
                   </button>
-                  <button
-                    onClick={() => notify(`${environment.name} actions`)}
-                    className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white"
-                    aria-label={`More actions for ${environment.name}`}
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenActionsId((current) => current === environment.id ? null : environment.id)}
+                      className="grid size-8 place-items-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white"
+                      aria-label={`More actions for ${environment.name}`}
+                      aria-haspopup="menu"
+                      aria-expanded={openActionsId === environment.id}
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                    {openActionsId === environment.id && (
+                      <div className="absolute right-0 top-10 z-20 min-w-44 overflow-hidden rounded-xl border border-white/10 bg-[#171b14] p-1 shadow-2xl" role="menu">
+                        <Link href={`/dashboard/${environment.id}`} onClick={() => setOpenActionsId(null)} className="block rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Open environment</Link>
+                        {environment.apiStatus === "draft" && (
+                          <button onClick={() => void lock(environment)} disabled={lockingId === environment.id} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white disabled:opacity-50" role="menuitem"><LockKeyhole size={13} /> {lockingId === environment.id ? "Locking…" : "Lock environment"}</button>
+                        )}
+                        <button onClick={() => void copyLink(environment)} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Copy dashboard link</button>
+                        <button onClick={() => void remove(environment)} disabled={removingId === environment.id} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-red-300/80 hover:bg-red-400/10 hover:text-red-200 disabled:opacity-50" role="menuitem">{removingId === environment.id ? "Removing…" : "Remove environment"}</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </article>
             ))
