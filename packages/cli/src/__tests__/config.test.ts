@@ -32,6 +32,12 @@ describe("runtime token discovery", () => {
     await expect(findRuntimeToken(tempDir)).resolves.toBe(token);
   });
 
+  it("prefers a valid local .env token over an invalid inherited token", async () => {
+    process.env.PASSWAY_TOKEN = "ps_live_legacy_28_char_value";
+    fs.writeFileSync(path.join(tempDir, ".env"), `PASSWAY_TOKEN=${token}\n`);
+    await expect(findRuntimeToken(tempDir)).resolves.toBe(token);
+  });
+
   it("fails local validation for malformed tokens", () => {
     expect(hasValidLocalTokenFormat(token)).toBe(true);
     expect(hasValidLocalTokenFormat("ps_live_short")).toBe(false);
