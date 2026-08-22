@@ -56,7 +56,11 @@ export class PasswayApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
-  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+  if (
+    init.body &&
+    !(init.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -111,7 +115,11 @@ export function createSecret(
 export function importEnv(environmentId: string, content: string) {
   return request<{ imported: number; secrets: Array<{ key: string }> }>(
     `/v1/environments/${encodeURIComponent(environmentId)}/import`,
-    { method: "POST", body: content, headers: { "Content-Type": "text/plain" } },
+    {
+      method: "POST",
+      body: content,
+      headers: { "Content-Type": "text/plain" },
+    },
   );
 }
 
@@ -138,6 +146,13 @@ export function lockEnvironment(environmentId: string) {
 export function hostEnvironment(environmentId: string) {
   return request<ApiRuntimeToken>(
     `/v1/environments/${encodeURIComponent(environmentId)}/host`,
+    { method: "POST" },
+  );
+}
+
+export function rotateRuntimeToken(environmentId: string) {
+  return request<ApiRuntimeToken>(
+    `/v1/environments/${encodeURIComponent(environmentId)}/runtime-tokens/rotate`,
     { method: "POST" },
   );
 }

@@ -11,6 +11,7 @@ import {
 import {
   listRuntimeTokens,
   revokeRuntimeToken,
+  rotateRuntimeToken,
 } from "../services/runtime-token.service.js";
 
 export const environmentsRouter = Router();
@@ -70,6 +71,22 @@ environmentsRouter.post(
       }
       return res.status(404).json({ error: "Not found" });
     }
+  },
+);
+
+environmentsRouter.post(
+  "/environments/:environmentId/runtime-tokens/rotate",
+  requireAuth,
+  async (req, res) => {
+    const rotated = await rotateRuntimeToken(
+      req.params.environmentId,
+      req.passwayUser!.id,
+      req.ip ?? "unknown",
+    );
+    if (!rotated) {
+      return res.status(404).json({ error: "Hosted environment not found" });
+    }
+    return res.status(201).json(rotated);
   },
 );
 

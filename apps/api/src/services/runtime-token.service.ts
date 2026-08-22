@@ -1,6 +1,15 @@
 import { and, eq } from "drizzle-orm";
-import { hashToken, looksLikePasswayToken } from "../crypto/tokens.js";
-import { accessToken, environment, project, workspace } from "../db/auth-schema.js";
+import {
+  generateToken,
+  hashToken,
+  looksLikePasswayToken,
+} from "../crypto/tokens.js";
+import {
+  accessToken,
+  environment,
+  project,
+  workspace,
+} from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { auditValues } from "./audit.service.js";
 import { getOwnedEnvironment } from "./environment-access.js";
@@ -61,7 +70,7 @@ export async function revokeRuntimeToken(
   environmentId: string,
   tokenId: string,
   userId: string,
-  ip: string
+  ip: string,
 ) {
   const owned = await getOwnedEnvironment(environmentId, userId);
   if (!owned) return false;
@@ -73,8 +82,8 @@ export async function revokeRuntimeToken(
       and(
         eq(accessToken.id, tokenId),
         eq(accessToken.environmentId, environmentId),
-        eq(accessToken.status, "active")
-      )
+        eq(accessToken.status, "active"),
+      ),
     )
     .returning({ id: accessToken.id });
   if (!revoked) return false;
@@ -88,9 +97,84 @@ export async function revokeRuntimeToken(
       accessTokenId: tokenId,
       ip,
       action: "RUNTIME_TOKEN_REVOKED",
-    })
+    }),
   );
   return true;
+}
+
+export async function rotateRuntimeToken(
+  environmentId: string,
+  userId: string,
+  ip: string,
+) {
+  const owned = await getOwnedEnvironment(environmentId, userId);
+  if (!owned || owned.status !== "hosted") return undefined;
+
+  const token = generateToken();
+  const now = new Date();
+  const result = await db.transaction(async (tx) => {
+    const active = await tx
+      .select({ id: accessToken.id })
+      .from(accessToken)
+      .where(
+        and(
+          eq(accessToken.environmentId, environmentId),
+          eq(accessToken.status, "active"),
+        ),
+      );
+
+    if (active.length) {
+      await tx
+        .update(accessToken)
+        .set({ status: "revoked", revoked: true, revokedAt: now })
+        .where(eq(accessToken.environmentId, environmentId));
+    }
+
+    const tokenId = crypto.randomUUID();
+    await tx.insert(accessToken).values({
+      id: tokenId,
+      environmentId,
+      tokenHash: hashToken(token),
+      tokenHint: `${token.slice(0, 16)}...`,
+      label: "Rotated runtime token",
+      status: "active",
+      revoked: false,
+      createdByUserId: userId,
+      createdAt: now,
+    });
+
+    await tx.insert(auditLog).values([
+      ...active.map((item) =>
+        auditValues({
+          environmentId,
+          projectId: owned.projectId,
+          workspaceId: owned.workspaceId,
+          actorUserId: userId,
+          accessTokenId: item.id,
+          ip,
+          action: "RUNTIME_TOKEN_REVOKED",
+        }),
+      ),
+      auditValues({
+        environmentId,
+        projectId: owned.projectId,
+        workspaceId: owned.workspaceId,
+        actorUserId: userId,
+        accessTokenId: tokenId,
+        ip,
+        action: "RUNTIME_TOKEN_CREATED",
+      }),
+    ]);
+
+    return { tokenId, createdAt: now };
+  });
+
+  return {
+    environmentId,
+    status: "hosted" as const,
+    token,
+    createdAt: result.createdAt,
+  };
 }
 
 export function touchRuntimeToken(tokenId: string) {

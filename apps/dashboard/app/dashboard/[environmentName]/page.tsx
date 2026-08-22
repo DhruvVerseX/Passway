@@ -38,6 +38,7 @@ import {
   listSecrets,
   lockEnvironment,
   PasswayApiError,
+  rotateRuntimeToken,
   type ApiEnvironment,
   type ApiSecret,
 } from "@/lib/passway-api";
@@ -311,7 +312,8 @@ export default function EnvironmentDashboard() {
   const [secrets, setSecrets] = useState<Secret[]>(
     environment.secrets?.length ? environment.secrets : defaults,
   );
-  const [backendEnvironment, setBackendEnvironment] = useState<StoredEnvironment | null>(null);
+  const [backendEnvironment, setBackendEnvironment] =
+    useState<StoredEnvironment | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(getConfiguredProjectId()));
   const [isSaving, setIsSaving] = useState(false);
   const [runtimeToken, setRuntimeToken] = useState<string | null>(null);
@@ -331,13 +333,19 @@ export default function EnvironmentDashboard() {
       try {
         const environments = await listEnvironments(projectId);
         const matched = environments.environments.find(
-          (item) => item.id === environmentId || item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug,
+          (item) =>
+            item.id === environmentId ||
+            item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug,
         );
         if (!matched || !active) return;
         setBackendEnvironment({
           id: matched.id,
           name: matched.name,
-          type: matched.type === "custom" ? "CI/CD" : (matched.type.charAt(0).toUpperCase() + matched.type.slice(1)) as EnvironmentType,
+          type:
+            matched.type === "custom"
+              ? "CI/CD"
+              : ((matched.type.charAt(0).toUpperCase() +
+                  matched.type.slice(1)) as EnvironmentType),
           description: matched.description ?? "",
           status: matched.status,
         });
@@ -356,7 +364,9 @@ export default function EnvironmentDashboard() {
   }, [environmentId, slug]);
 
   const currentEnvironment = backendEnvironment ?? environment;
-  const isLocked = currentEnvironment.status === "locked" || currentEnvironment.status === "hosted";
+  const isLocked =
+    currentEnvironment.status === "locked" ||
+    currentEnvironment.status === "hosted";
   const visible = useMemo(() => {
     const normalized = query.toLowerCase().trim();
     return secrets.filter(
@@ -378,7 +388,9 @@ export default function EnvironmentDashboard() {
         ...current,
       ]);
       setModalOpen(false);
-      notify(`${items.length} secret${items.length === 1 ? "" : "s"} added to preview`);
+      notify(
+        `${items.length} secret${items.length === 1 ? "" : "s"} added to preview`,
+      );
       return;
     }
 
@@ -397,9 +409,15 @@ export default function EnvironmentDashboard() {
       const result = await listSecrets(environmentId);
       setSecrets(result.secrets.map(fromApiSecret));
       setModalOpen(false);
-      notify(`${items.length} secret${items.length === 1 ? "" : "s"} encrypted`);
+      notify(
+        `${items.length} secret${items.length === 1 ? "" : "s"} encrypted`,
+      );
     } catch (error) {
-      notify(error instanceof PasswayApiError ? error.message : "Unable to save secrets");
+      notify(
+        error instanceof PasswayApiError
+          ? error.message
+          : "Unable to save secrets",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -447,7 +465,31 @@ export default function EnvironmentDashboard() {
       setSecrets((current) => current.filter((secret) => secret.id !== id));
       notify(`${item.key} removed`);
     } catch (error) {
-      notify(error instanceof PasswayApiError ? error.message : "Unable to delete secret");
+      notify(
+        error instanceof PasswayApiError
+          ? error.message
+          : "Unable to delete secret",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const rotateToken = async () => {
+    if (!environmentId) {
+      notify("Open a backend-connected environment to rotate its token");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const result = await rotateRuntimeToken(environmentId);
+      setRuntimeToken(result.token);
+    } catch (error) {
+      notify(
+        error instanceof PasswayApiError
+          ? error.message
+          : "Unable to rotate runtime token",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -461,10 +503,16 @@ export default function EnvironmentDashboard() {
     setIsSaving(true);
     try {
       const result = await hostEnvironment(environmentId);
-      setBackendEnvironment((current) => current ? { ...current, status: "hosted", id: environmentId } : current);
+      setBackendEnvironment((current) =>
+        current ? { ...current, status: "hosted", id: environmentId } : current,
+      );
       setRuntimeToken(result.token);
     } catch (error) {
-      notify(error instanceof PasswayApiError ? error.message : "Unable to host environment");
+      notify(
+        error instanceof PasswayApiError
+          ? error.message
+          : "Unable to host environment",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -512,15 +560,26 @@ export default function EnvironmentDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {backendEnvironment && backendEnvironment.status !== "hosted" && backendEnvironment.status !== "disabled" && (
+          {backendEnvironment?.status === "hosted" && (
             <button
-              onClick={host}
+              onClick={rotateToken}
               disabled={isSaving}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] px-3 text-xs font-medium text-[#b9f55d] transition hover:bg-[#b9f55d]/[0.1] disabled:opacity-50"
             >
-              <ShieldCheck size={14} /> Host environment
+              <Settings2 size={14} /> Rotate runtime token
             </button>
           )}
+          {backendEnvironment &&
+            backendEnvironment.status !== "hosted" &&
+            backendEnvironment.status !== "disabled" && (
+              <button
+                onClick={host}
+                disabled={isSaving}
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] px-3 text-xs font-medium text-[#b9f55d] transition hover:bg-[#b9f55d]/[0.1] disabled:opacity-50"
+              >
+                <ShieldCheck size={14} /> Host environment
+              </button>
+            )}
           <button
             onClick={downloadEnv}
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.085] px-3 text-xs font-medium text-white/55 transition hover:bg-white/[0.04] hover:text-white"
