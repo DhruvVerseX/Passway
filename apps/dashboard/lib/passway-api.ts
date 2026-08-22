@@ -66,6 +66,7 @@ async function request<T>(path: string, init: RequestInit = {}) {
 
   const response = await fetch(`${apiBaseURL()}${path}`, {
     ...init,
+    cache: init.cache ?? "no-store",
     credentials: "include",
     headers,
   });
