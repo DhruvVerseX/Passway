@@ -21,9 +21,8 @@ afterEach(() => {
 });
 
 describe("runtime token discovery", () => {
-  it("uses PASSWAY_TOKEN from the process environment", async () => {
+  it("uses PASSWAY_TOKEN from the process environment when no file token exists", async () => {
     process.env.PASSWAY_TOKEN = token;
-    fs.writeFileSync(path.join(tempDir, ".env"), `PASSWAY_TOKEN=ps_live_${"b".repeat(43)}\n`);
     await expect(findRuntimeToken(tempDir)).resolves.toBe(token);
   });
 
@@ -32,10 +31,10 @@ describe("runtime token discovery", () => {
     await expect(findRuntimeToken(tempDir)).resolves.toBe(token);
   });
 
-  it("prefers a valid local .env token over an invalid inherited token", async () => {
-    process.env.PASSWAY_TOKEN = "ps_live_legacy_28_char_value";
-    fs.writeFileSync(path.join(tempDir, ".env"), `PASSWAY_TOKEN=${token}\n`);
-    await expect(findRuntimeToken(tempDir)).resolves.toBe(token);
+  it("does not mask a changed .env token with an inherited token", async () => {
+    process.env.PASSWAY_TOKEN = token;
+    fs.writeFileSync(path.join(tempDir, ".env"), "PASSWAY_TOKEN=ps_live_short\n");
+    await expect(findRuntimeToken(tempDir)).resolves.toBe("ps_live_short");
   });
 
   it("fails local validation for malformed tokens", () => {

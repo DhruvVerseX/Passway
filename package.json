@@ -15,7 +15,6 @@
     "dev:dashboard": "bun run --cwd apps/dashboard dev",
     "build:frontends": "bun run --cwd apps/web build && bun run --cwd apps/dashboard build",
     "start": "bun run --cwd apps/api start",
-    "token:generate": "bun scripts/generate-token.ts",
     "typecheck": "bun run --cwd apps/api typecheck && bun run --cwd packages/cli typecheck",
     "test:cli": "bun run --cwd packages/cli test"
   }
