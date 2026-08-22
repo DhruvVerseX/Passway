@@ -165,7 +165,7 @@ export function EnvironmentOnboardingModal({
       const resolvedProjectId = projectId || (await bootstrapProject()).project.id;
       const environment = await createEnvironment(resolvedProjectId, {
         name: name.trim(),
-        type: type === "CI/CD" ? "custom" : (type.toLowerCase() as "development" | "preview" | "staging" | "production" | "custom"),
+        type: type === "Testing" || type === "CI/CD" ? "custom" : type.toLowerCase() as "development" | "preview" | "staging" | "production",
         description: description.trim() || undefined,
       });
 
