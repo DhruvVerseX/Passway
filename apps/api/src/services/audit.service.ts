@@ -3,6 +3,9 @@ import { auditLog } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 
 export type AuditAction =
+  | "BUNDLE_CREATED"
+  | "SECRETS_IMPORTED"
+  | "ENVIRONMENT_LOCKED"
   | "SECRET_CREATED"
   | "SECRET_UPDATED"
   | "SECRET_DELETED"

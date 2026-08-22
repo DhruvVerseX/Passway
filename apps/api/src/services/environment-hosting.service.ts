@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { generateToken, hashToken } from "../crypto/tokens.js";
 import { accessToken, auditLog, environment } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
@@ -17,11 +17,18 @@ function tokenHint(token: string) {
   return `${token.slice(0, 16)}...`;
 }
 
-export async function hostEnvironment(environmentId: string, userId: string, ip: string) {
+export async function hostEnvironment(
+  environmentId: string,
+  userId: string,
+  ip: string,
+) {
   const owned = await getOwnedEnvironment(environmentId, userId);
   if (!owned) throw new EnvironmentHostingError("NOT_FOUND");
-  if (owned.status === "hosted") throw new EnvironmentHostingError("ALREADY_HOSTED");
-  if (owned.status !== "draft") throw new EnvironmentHostingError("NOT_ELIGIBLE");
+  if (owned.status === "hosted")
+    throw new EnvironmentHostingError("ALREADY_HOSTED");
+  if (owned.status !== "draft" && owned.status !== "locked") {
+    throw new EnvironmentHostingError("NOT_ELIGIBLE");
+  }
 
   const token = generateToken();
   const now = new Date();
@@ -29,7 +36,12 @@ export async function hostEnvironment(environmentId: string, userId: string, ip:
     const [hosted] = await tx
       .update(environment)
       .set({ status: "hosted", lockedAt: now, hostedAt: now, updatedAt: now })
-      .where(and(eq(environment.id, environmentId), eq(environment.status, "draft")))
+      .where(
+        and(
+          eq(environment.id, environmentId),
+          or(eq(environment.status, "draft"), eq(environment.status, "locked")),
+        ),
+      )
       .returning({ id: environment.id });
     if (!hosted) return undefined;
 
@@ -69,5 +81,10 @@ export async function hostEnvironment(environmentId: string, userId: string, ip:
   });
 
   if (!result) throw new EnvironmentHostingError("ALREADY_HOSTED");
-  return { environmentId, status: "hosted" as const, token, createdAt: result.createdAt };
+  return {
+    environmentId,
+    status: "hosted" as const,
+    token,
+    createdAt: result.createdAt,
+  };
 }
