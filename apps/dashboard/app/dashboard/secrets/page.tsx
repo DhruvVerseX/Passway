@@ -30,48 +30,7 @@ type Secret = {
   owner: string;
 };
 
-const initialSecrets: Secret[] = [
-  {
-    id: "secret_01",
-    key: "DATABASE_URL",
-    value: "postgresql://app:••••••••@db.passway.cloud:5432/app",
-    environment: "Production",
-    updated: "2 hours ago",
-    owner: "You",
-  },
-  {
-    id: "secret_02",
-    key: "OPENAI_API_KEY",
-    value: "sk-proj-••••••••••••••••••••",
-    environment: "Production",
-    updated: "Yesterday",
-    owner: "You",
-  },
-  {
-    id: "secret_03",
-    key: "BETTER_AUTH_SECRET",
-    value: "••••••••••••••••••••••••••••••••",
-    environment: "Preview",
-    updated: "3 days ago",
-    owner: "You",
-  },
-  {
-    id: "secret_04",
-    key: "NEXT_PUBLIC_APP_URL",
-    value: "https://app.passway.co.in",
-    environment: "Development",
-    updated: "6 days ago",
-    owner: "Ari Sharma",
-  },
-  {
-    id: "secret_05",
-    key: "RESEND_API_KEY",
-    value: "re_••••••••••••••••••••",
-    environment: "Production",
-    updated: "Jun 28, 2026",
-    owner: "You",
-  },
-];
+const initialSecrets: Secret[] = [];
 
 const tone: Record<Environment, string> = {
   Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300",
@@ -340,7 +299,8 @@ export default function SecretsPage() {
             </span>
           </div>
           <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
-            <span className="size-1.5 rounded-full bg-emerald-400" /> Across 3
+            <span className="size-1.5 rounded-full bg-emerald-400" /> Across{" "}
+            {new Set(secrets.map((secret) => secret.environment)).size}
             environments
           </p>
         </article>
@@ -351,7 +311,7 @@ export default function SecretsPage() {
                 Healthy coverage
               </p>
               <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
-                100%
+                {secrets.length ? "100%" : "—"}
               </p>
             </div>
             <span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-emerald-300">
@@ -359,8 +319,10 @@ export default function SecretsPage() {
             </span>
           </div>
           <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
-            <span className="size-1.5 rounded-full bg-emerald-400" /> No stale
-            values detected
+            <span className="size-1.5 rounded-full bg-emerald-400" />
+            {secrets.length
+              ? "No stale values detected"
+              : "Waiting for real data"}
           </p>
         </article>
         <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
@@ -370,7 +332,7 @@ export default function SecretsPage() {
                 Last rotation
               </p>
               <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
-                2h
+                {secrets.length ? "—" : "—"}
               </p>
             </div>
             <span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/50">
@@ -378,8 +340,8 @@ export default function SecretsPage() {
             </span>
           </div>
           <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/35">
-            <span className="size-1.5 rounded-full bg-[#b9f55d]" /> DATABASE_URL
-            updated
+            <span className="size-1.5 rounded-full bg-[#b9f55d]" /> No secret
+            activity yet
           </p>
         </article>
       </section>

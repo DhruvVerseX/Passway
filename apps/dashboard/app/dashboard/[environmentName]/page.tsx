@@ -70,33 +70,6 @@ const typeTone: Record<EnvironmentType, string> = {
   Testing: "border-blue-400/15 bg-blue-400/[0.07] text-blue-300",
   "CI/CD": "border-pink-400/15 bg-pink-400/[0.07] text-pink-300",
 };
-const defaults: Secret[] = [
-  {
-    id: "secret_01",
-    key: "DATABASE_URL",
-    value: "postgresql://app:••••••••@db.passway.cloud:5432/app",
-    updated: "2 hours ago",
-  },
-  {
-    id: "secret_02",
-    key: "OPENAI_API_KEY",
-    value: "sk-proj-••••••••••••••••••••",
-    updated: "Yesterday",
-  },
-  {
-    id: "secret_03",
-    key: "BETTER_AUTH_SECRET",
-    value: "••••••••••••••••••••••••••••••••",
-    updated: "3 days ago",
-  },
-  {
-    id: "secret_04",
-    key: "NEXT_PUBLIC_APP_URL",
-    value: "https://app.passway.co.in",
-    updated: "6 days ago",
-  },
-];
-
 function formatName(slug: string) {
   return slug
     .split("-")
@@ -304,14 +277,12 @@ export default function EnvironmentDashboard() {
         name: formatName(slug),
         type: "Development" as EnvironmentType,
         description: "Secure runtime configuration for this environment.",
-        secrets: defaults,
+        secrets: [],
         status: "draft",
       };
 
   const environmentId = (environment as StoredEnvironment).id;
-  const [secrets, setSecrets] = useState<Secret[]>(
-    environment.secrets?.length ? environment.secrets : defaults,
-  );
+  const [secrets, setSecrets] = useState<Secret[]>(environment.secrets ?? []);
   const [backendEnvironment, setBackendEnvironment] =
     useState<StoredEnvironment | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(getConfiguredProjectId()));

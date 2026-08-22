@@ -22,12 +22,7 @@ export const projects = [
   },
 ];
 
-export const secrets = [
-  { key: "DATABASE_URL", updated: "2 hours ago" },
-  { key: "OPENAI_API_KEY", updated: "Yesterday" },
-  { key: "BETTER_AUTH_SECRET", updated: "3 days ago" },
-  { key: "NEXT_PUBLIC_APP_URL", updated: "6 days ago" },
-];
+export const secrets: Array<{ key: string; updated: string }> = [];
 
 export const tokens = [
   {
