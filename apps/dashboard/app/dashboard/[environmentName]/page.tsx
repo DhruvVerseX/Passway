@@ -458,11 +458,16 @@ export default function EnvironmentDashboard() {
       setSecrets((current) => current.filter((secret) => secret.id !== id));
       notify(`${item.key} removed`);
     } catch (error) {
-      notify(
-        error instanceof PasswayApiError
-          ? error.message
-          : "Unable to delete secret",
-      );
+      if (error instanceof PasswayApiError && error.status === 404) {
+        setSecrets((current) => current.filter((secret) => secret.id !== id));
+        notify(`${item.key} was already removed`);
+      } else {
+        notify(
+          error instanceof PasswayApiError
+            ? error.message
+            : "Unable to delete secret",
+        );
+      }
     } finally {
       setIsSaving(false);
     }

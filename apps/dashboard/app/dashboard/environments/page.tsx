@@ -164,11 +164,18 @@ export default function EnvironmentsPage() {
       );
       notify(`${environment.name} removed from this workspace`);
     } catch (error) {
-      notify(
-        error instanceof Error
-          ? error.message
-          : `Unable to remove ${environment.name}`,
-      );
+      if (error instanceof Error && "status" in error && error.status === 404) {
+        setEnvironments((current) =>
+          current.filter((item) => item.id !== environment.id),
+        );
+        notify(`${environment.name} was already removed`);
+      } else {
+        notify(
+          error instanceof Error
+            ? error.message
+            : `Unable to remove ${environment.name}`,
+        );
+      }
     } finally {
       setRemovingId(null);
     }
