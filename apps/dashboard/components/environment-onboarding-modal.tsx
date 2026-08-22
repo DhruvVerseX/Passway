@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
+  bootstrapProject,
   createEnvironment,
   createSecret,
   hostEnvironment,
@@ -161,11 +162,8 @@ export function EnvironmentOnboardingModal({
     setIsSubmitting(true);
     try {
       const projectId = await resolveProjectId();
-      if (!projectId) {
-        setError("No owned Passway project was found for this account.");
-        return;
-      }
-      const environment = await createEnvironment(projectId, {
+      const resolvedProjectId = projectId || (await bootstrapProject()).project.id;
+      const environment = await createEnvironment(resolvedProjectId, {
         name: name.trim(),
         type: type === "CI/CD" ? "custom" : (type.toLowerCase() as "development" | "preview" | "staging" | "production" | "custom"),
         description: description.trim() || undefined,

@@ -42,6 +42,60 @@ resourcesRouter.get("/projects", requireAuth, async (req, res) => {
   return res.json({ projects });
 });
 
+resourcesRouter.post("/bootstrap", requireAuth, async (req, res) => {
+  const [existing] = await db
+    .select({ id: project.id })
+    .from(project)
+    .innerJoin(workspace, eq(project.workspaceId, workspace.id))
+    .where(eq(workspace.ownerUserId, req.passwayUser!.id))
+    .limit(1);
+  if (existing) return res.json({ project: existing, created: false });
+
+  const result = await db.transaction(async (tx) => {
+    const now = new Date();
+    const [createdWorkspace] = await tx
+      .insert(workspace)
+      .values({
+        id: crypto.randomUUID(),
+        ownerUserId: req.passwayUser!.id,
+        name: "Passway Workspace",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    const [createdProject] = await tx
+      .insert(project)
+      .values({
+        id: crypto.randomUUID(),
+        workspaceId: createdWorkspace.id,
+        name: "Primary Project",
+        description: "Your first Passway project.",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    const [development] = await tx
+      .insert(environment)
+      .values({
+        id: crypto.randomUUID(),
+        projectId: createdProject.id,
+        name: "development",
+        type: "development",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return {
+      workspace: createdWorkspace,
+      project: createdProject,
+      environment: environmentMetadata(development),
+      created: true,
+    };
+  });
+
+  return res.status(201).json(result);
+});
+
 resourcesRouter.post("/workspaces", requireAuth, async (req, res) => {
   const input = workspaceSchema.safeParse(req.body);
   if (!input.success)

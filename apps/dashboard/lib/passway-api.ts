@@ -158,3 +158,10 @@ export async function resolveProjectId() {
   const result = await listProjects();
   return result.projects[0]?.id ?? "";
 }
+
+export function bootstrapProject() {
+  return request<{
+    project: ApiProject;
+    created: boolean;
+  }>("/v1/bootstrap", { method: "POST", body: JSON.stringify({}) });
+}
