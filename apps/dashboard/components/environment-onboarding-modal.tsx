@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  Copy,
   FileKey2,
   FileUp,
   Info,
@@ -17,6 +18,14 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  createEnvironment,
+  createSecret,
+  getConfiguredProjectId,
+  hostEnvironment,
+  importEnv,
+  PasswayApiError,
+} from "@/lib/passway-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type EnvironmentType =
@@ -64,6 +73,10 @@ export function EnvironmentOnboardingModal({
   const [manualValue, setManualValue] = useState("");
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [uploadedContent, setUploadedContent] = useState("");
+  const [runtimeToken, setRuntimeToken] = useState<string | null>(null);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const slug = useMemo(() => slugify(name), [name]);
 
   useEffect(() => {
@@ -78,6 +91,9 @@ export function EnvironmentOnboardingModal({
     if (!open) {
       setStep(1);
       setError(null);
+      setRuntimeToken(null);
+      setCopiedToken(false);
+      setUploadedContent("");
     }
   }, [open]);
 
@@ -96,7 +112,9 @@ export function EnvironmentOnboardingModal({
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => {
-      const parsed = String(reader.result)
+      const content = String(reader.result);
+      setUploadedContent(content);
+      const parsed = content
         .split(/\r?\n/)
         .flatMap((line, index) => {
           const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
@@ -118,7 +136,18 @@ export function EnvironmentOnboardingModal({
     };
     reader.readAsText(file);
   };
-  const continueFlow = () => {
+  const copyRuntimeToken = async () => {
+    if (!runtimeToken) return;
+    try {
+      await navigator.clipboard.writeText(runtimeToken);
+    } catch {
+      // Clipboard access can be unavailable in embedded previews.
+    }
+    setCopiedToken(true);
+    window.setTimeout(() => setCopiedToken(false), 2200);
+  };
+
+  const continueFlow = async () => {
     setError(null);
     if (step === 1 && !name.trim()) {
       setError("Give this environment a name to continue.");
@@ -128,26 +157,59 @@ export function EnvironmentOnboardingModal({
       setStep((current) => current + 1);
       return;
     }
-    sessionStorage.setItem(
-      `passway_environment_${slug}`,
-      JSON.stringify({
+
+    const projectId = getConfiguredProjectId();
+    if (!projectId) {
+      setError("Set NEXT_PUBLIC_PASSWAY_PROJECT_ID before creating an environment.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const environment = await createEnvironment(projectId, {
         name: name.trim(),
-        slug,
-        type,
-        description: description.trim(),
-        secrets,
-        createdAt: new Date().toISOString(),
-      }),
-    );
-    onClose();
-    router.push("/dashboard/environments");
+        type: type === "CI/CD" ? "custom" : (type.toLowerCase() as "development" | "preview" | "staging" | "production" | "custom"),
+        description: description.trim() || undefined,
+      });
+
+      if (uploadedContent) {
+        await importEnv(environment.environment.id, uploadedContent);
+      } else {
+        for (const secret of secrets) {
+          await createSecret(environment.environment.id, {
+            key: secret.key,
+            value: secret.value,
+          });
+        }
+      }
+
+      const hosted = await hostEnvironment(environment.environment.id);
+      sessionStorage.setItem(
+        `passway_environment_${slug}`,
+        JSON.stringify({
+          ...environment.environment,
+          secrets,
+          runtimeTokenCreatedAt: hosted.createdAt,
+        }),
+      );
+      setRuntimeToken(hosted.token);
+      setStep(4);
+    } catch (error) {
+      setError(
+        error instanceof PasswayApiError
+          ? error.message
+          : "Unable to create this environment right now.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-3 backdrop-blur-md sm:p-6"
       role="presentation"
-      onMouseDown={(event) => event.currentTarget === event.target && onClose()}
+      onMouseDown={(event) => event.currentTarget === event.target && !runtimeToken && onClose()}
     >
       <section
         className="flex max-h-[92vh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0f120f] shadow-[0_24px_90px_rgba(0,0,0,.65)]"
@@ -172,7 +234,7 @@ export function EnvironmentOnboardingModal({
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => !runtimeToken && onClose()}
             className="grid size-8 place-items-center rounded-lg text-white/35 transition hover:bg-white/[0.06] hover:text-white"
             aria-label="Close onboarding"
           >
@@ -463,6 +525,25 @@ export function EnvironmentOnboardingModal({
               </div>
             </div>
           )}
+          {step === 4 && runtimeToken && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] p-5">
+                <div className="flex items-start gap-3">
+                  <span className="grid size-9 place-items-center rounded-xl border border-[#b9f55d]/25 bg-[#b9f55d]/10 text-[#b9f55d]"><CheckCircle2 size={18} /></span>
+                  <div>
+                    <p className="text-sm font-semibold text-white/90">Your environment is hosted.</p>
+                    <p className="mt-1 text-xs leading-5 text-white/45">Passway generated a live runtime token for {name}. Copy it now—it will not be shown again.</p>
+                  </div>
+                </div>
+                <div className="mt-5 flex items-center gap-2 rounded-lg border border-white/[0.1] bg-black/30 p-2">
+                  <code className="min-w-0 flex-1 break-all px-2 font-mono text-[11px] leading-5 text-[#d9ffa0]">{runtimeToken}</code>
+                  <button type="button" onClick={copyRuntimeToken} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-[#b9f55d] px-2.5 text-[10px] font-semibold text-[#10130d] transition hover:bg-[#c8ff72]">{copiedToken ? <Check size={12} /> : <Copy size={12} />} {copiedToken ? "Copied" : "Copy token"}</button>
+                </div>
+              </div>
+              <div className="flex gap-2 rounded-lg border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2.5 text-[10px] leading-4 text-amber-100/60"><LockKeyhole size={13} className="mt-0.5 shrink-0 text-amber-200/70" /><span><b className="font-medium text-amber-100/85">Treat this like a password.</b> Store it in your CI/CD secret manager. Passway only returns the plaintext token during this hosting response.</span></div>
+              <div className="rounded-xl border border-white/[0.075] bg-white/[0.018] p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/25">What happens next</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><div><p className="text-[11px] font-medium text-white/65">1. Save it</p><p className="mt-1 text-[10px] leading-4 text-white/30">Copy the token into your deployment secret manager.</p></div><div><p className="text-[11px] font-medium text-white/65">2. Connect</p><p className="mt-1 text-[10px] leading-4 text-white/30">Use it with the Passway CLI or runtime SDK.</p></div><div><p className="text-[11px] font-medium text-white/65">3. Manage</p><p className="mt-1 text-[10px] leading-4 text-white/30">Review the hosted environment from its dashboard.</p></div></div></div>
+            </div>
+          )}
           {error && (
             <p
               className="mt-3 rounded-lg border border-red-400/20 bg-red-400/[0.06] px-3 py-2 text-[10px] text-red-300"
@@ -476,17 +557,18 @@ export function EnvironmentOnboardingModal({
           <button
             type="button"
             onClick={() => setStep((current) => Math.max(1, current - 1))}
-            disabled={step === 1}
+            disabled={step === 1 || step === 4}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/[0.09] px-3 text-[11px] font-medium text-white/50 transition hover:bg-white/[0.04] hover:text-white disabled:pointer-events-none disabled:opacity-0"
           >
             <ArrowLeft size={13} /> Back
           </button>
           <button
             type="button"
-            onClick={continueFlow}
+            onClick={step === 4 ? () => { onClose(); router.push("/dashboard/environments"); } : continueFlow}
+            disabled={isSubmitting}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#b9f55d] px-3.5 text-[11px] font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"
           >
-            {step === 3 ? "Create Environment" : "Continue"}
+            {isSubmitting ? "Securing environment…" : step === 4 ? "Open environments" : step === 3 ? "Create Environment" : "Continue"}
             <ArrowRight size={13} />
           </button>
         </footer>

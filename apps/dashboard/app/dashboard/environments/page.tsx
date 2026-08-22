@@ -16,6 +16,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
 import { EnvironmentOnboardingModal } from "@/components/environment-onboarding-modal";
+import {
+  getConfiguredProjectId,
+  listEnvironments,
+  type ApiEnvironment,
+} from "@/lib/passway-api";
 
 type EnvironmentType =
   "Production" | "Development" | "Staging" | "Preview" | "Testing" | "CI/CD";
@@ -73,6 +78,19 @@ const initialEnvironments: Environment[] = [
   },
 ];
 
+function fromApiEnvironment(item: ApiEnvironment): Environment {
+  return {
+    id: item.id,
+    name: item.name,
+    type: item.type === "custom" ? "CI/CD" : (item.type.charAt(0).toUpperCase() + item.type.slice(1)) as EnvironmentType,
+    description: item.description ?? "No description added.",
+    secrets: 0,
+    tokens: 0,
+    status: item.status === "disabled" ? "Needs attention" : "Healthy",
+    updated: new Date(item.updatedAt).toLocaleDateString(),
+  };
+}
+
 function readCreatedEnvironments(): Environment[] {
   if (typeof window === "undefined") return [];
 
@@ -122,13 +140,34 @@ export default function EnvironmentsPage() {
   const [environments, setEnvironments] = useState(initialEnvironments);
 
   useEffect(() => {
-    const created = readCreatedEnvironments();
-    if (!created.length) return;
+    let active = true;
 
-    setEnvironments((current) => [
-      ...created,
-      ...current.filter((item) => !created.some((entry) => entry.id === item.id)),
-    ]);
+    const load = async () => {
+      const projectId = getConfiguredProjectId();
+      if (projectId) {
+        try {
+          const result = await listEnvironments(projectId);
+          if (active && result.environments.length) {
+            setEnvironments(result.environments.map(fromApiEnvironment));
+          }
+        } catch {
+          // Keep the local fixture list visible when the API is unavailable.
+        }
+      }
+
+      const created = readCreatedEnvironments();
+      if (active && created.length) {
+        setEnvironments((current) => [
+          ...created,
+          ...current.filter((item) => !created.some((entry) => entry.id === item.id)),
+        ]);
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
   }, []);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);

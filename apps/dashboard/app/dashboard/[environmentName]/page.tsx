@@ -25,12 +25,41 @@ import {
   X,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ControlPlaneShell } from "@/components/control-plane-shell";
+import { RuntimeTokenDialog } from "@/components/runtime-token-dialog";
+import {
+  createSecret,
+  deleteSecret,
+  getConfiguredProjectId,
+  hostEnvironment,
+  importEnv,
+  listEnvironments,
+  listSecrets,
+  lockEnvironment,
+  PasswayApiError,
+  type ApiEnvironment,
+  type ApiSecret,
+} from "@/lib/passway-api";
 
 type EnvironmentType =
   "Production" | "Development" | "Staging" | "Preview" | "Testing" | "CI/CD";
-type Secret = { id: string; key: string; value: string; updated: string };
+type Secret = {
+  id: string;
+  key: string;
+  value: string;
+  updated: string;
+  locked?: boolean;
+};
+
+type StoredEnvironment = {
+  id?: string;
+  name: string;
+  type: EnvironmentType;
+  description: string;
+  secrets?: Secret[];
+  status?: ApiEnvironment["status"];
+};
 
 const typeTone: Record<EnvironmentType, string> = {
   Production: "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300",
@@ -73,6 +102,16 @@ function formatName(slug: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
+function fromApiSecret(item: ApiSecret): Secret {
+  return {
+    id: item.id,
+    key: item.key,
+    value: "",
+    updated: new Date(item.updatedAt).toLocaleDateString(),
+    locked: true,
+  };
+}
+
 function parseEnv(text: string): Secret[] {
   return text.split(/\r?\n/).flatMap((line, index) => {
     const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
@@ -95,7 +134,7 @@ function AddSecretModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onAdd: (secrets: Secret[]) => void;
+  onAdd: (secrets: Secret[], rawContent?: string) => void;
 }) {
   const [mode, setMode] = useState<"manual" | "upload">("manual");
   const [key, setKey] = useState("");
@@ -215,7 +254,10 @@ function AddSecretModal({
                 if (!file) return;
                 setFileName(file.name);
                 const reader = new FileReader();
-                reader.onload = () => onAdd(parseEnv(String(reader.result)));
+                reader.onload = () => {
+                  const content = String(reader.result);
+                  onAdd(parseEnv(content), content);
+                };
                 reader.readAsText(file);
               }}
             />
@@ -250,7 +292,7 @@ export default function EnvironmentDashboard() {
     typeof window !== "undefined"
       ? sessionStorage.getItem(`passway_environment_${slug}`)
       : null;
-  const environment = stored
+  const environment: StoredEnvironment = stored
     ? (JSON.parse(stored) as {
         name: string;
         type: EnvironmentType;
@@ -262,10 +304,17 @@ export default function EnvironmentDashboard() {
         type: "Development" as EnvironmentType,
         description: "Secure runtime configuration for this environment.",
         secrets: defaults,
+        status: "draft",
       };
+
+  const environmentId = (environment as StoredEnvironment).id;
   const [secrets, setSecrets] = useState<Secret[]>(
     environment.secrets?.length ? environment.secrets : defaults,
   );
+  const [backendEnvironment, setBackendEnvironment] = useState<StoredEnvironment | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(getConfiguredProjectId()));
+  const [isSaving, setIsSaving] = useState(false);
+  const [runtimeToken, setRuntimeToken] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Recently updated">("All");
   const [revealed, setRevealed] = useState<string[]>([]);
@@ -273,6 +322,41 @@ export default function EnvironmentDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Secrets");
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const projectId = getConfiguredProjectId();
+      if (!projectId) return;
+      try {
+        const environments = await listEnvironments(projectId);
+        const matched = environments.environments.find(
+          (item) => item.id === environmentId || item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug,
+        );
+        if (!matched || !active) return;
+        setBackendEnvironment({
+          id: matched.id,
+          name: matched.name,
+          type: matched.type === "custom" ? "CI/CD" : (matched.type.charAt(0).toUpperCase() + matched.type.slice(1)) as EnvironmentType,
+          description: matched.description ?? "",
+          status: matched.status,
+        });
+        const result = await listSecrets(matched.id);
+        if (active) setSecrets(result.secrets.map(fromApiSecret));
+      } catch {
+        // Keep the local preview state visible when the backend is unavailable.
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [environmentId, slug]);
+
+  const currentEnvironment = backendEnvironment ?? environment;
+  const isLocked = currentEnvironment.status === "locked" || currentEnvironment.status === "hosted";
   const visible = useMemo(() => {
     const normalized = query.toLowerCase().trim();
     return secrets.filter(
@@ -285,17 +369,46 @@ export default function EnvironmentDashboard() {
     setToast(message);
     window.setTimeout(() => setToast(null), 2400);
   };
-  const addSecrets = (items: Secret[]) => {
-    setSecrets((current) => [
-      ...items.filter(
-        (item) => !current.some((existing) => existing.key === item.key),
-      ),
-      ...current,
-    ]);
-    setModalOpen(false);
-    notify(`${items.length} secret${items.length === 1 ? "" : "s"} added`);
+  const addSecrets = async (items: Secret[], rawContent?: string) => {
+    if (!environmentId) {
+      setSecrets((current) => [
+        ...items.filter(
+          (item) => !current.some((existing) => existing.key === item.key),
+        ),
+        ...current,
+      ]);
+      setModalOpen(false);
+      notify(`${items.length} secret${items.length === 1 ? "" : "s"} added to preview`);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (rawContent) {
+        await importEnv(environmentId, rawContent);
+      } else {
+        for (const item of items) {
+          await createSecret(environmentId, {
+            key: item.key,
+            value: item.value,
+          });
+        }
+      }
+      const result = await listSecrets(environmentId);
+      setSecrets(result.secrets.map(fromApiSecret));
+      setModalOpen(false);
+      notify(`${items.length} secret${items.length === 1 ? "" : "s"} encrypted`);
+    } catch (error) {
+      notify(error instanceof PasswayApiError ? error.message : "Unable to save secrets");
+    } finally {
+      setIsSaving(false);
+    }
   };
   const copyValue = async (secret: Secret) => {
+    if (secret.locked || !secret.value) {
+      notify("Plaintext values are not returned after hosting");
+      return;
+    }
     try {
       await navigator.clipboard.writeText(secret.value);
     } catch {
@@ -305,6 +418,10 @@ export default function EnvironmentDashboard() {
     window.setTimeout(() => setCopied(null), 1700);
   };
   const downloadEnv = () => {
+    if (isLocked) {
+      notify("Export is unavailable after the environment is hosted");
+      return;
+    }
     const content = secrets
       .map((secret) => `${secret.key}=${secret.value}`)
       .join("\n");
@@ -316,14 +433,50 @@ export default function EnvironmentDashboard() {
     URL.revokeObjectURL(link.href);
     notify("Environment file prepared");
   };
-  const remove = (id: string) => {
-    const secret = secrets.find((item) => item.id === id);
-    setSecrets((current) => current.filter((item) => item.id !== id));
-    if (secret) notify(`${secret.key} removed`);
+  const remove = async (id: string) => {
+    const item = secrets.find((secret) => secret.id === id);
+    if (!item) return;
+    if (!environmentId || item.locked) {
+      notify("Hosted secrets cannot be deleted");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await deleteSecret(environmentId, item.key);
+      setSecrets((current) => current.filter((secret) => secret.id !== id));
+      notify(`${item.key} removed`);
+    } catch (error) {
+      notify(error instanceof PasswayApiError ? error.message : "Unable to delete secret");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const host = async () => {
+    if (!environmentId) {
+      notify("Connect this environment to the Passway API first");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const result = await hostEnvironment(environmentId);
+      setBackendEnvironment((current) => current ? { ...current, status: "hosted", id: environmentId } : current);
+      setRuntimeToken(result.token);
+    } catch (error) {
+      notify(error instanceof PasswayApiError ? error.message : "Unable to host environment");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <ControlPlaneShell active="Environments" title={environment.name}>
+      <RuntimeTokenDialog
+        token={runtimeToken}
+        environmentName={currentEnvironment.name}
+        onClose={() => setRuntimeToken(null)}
+      />
       <AddSecretModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -359,6 +512,15 @@ export default function EnvironmentDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {backendEnvironment && backendEnvironment.status !== "hosted" && backendEnvironment.status !== "disabled" && (
+            <button
+              onClick={host}
+              disabled={isSaving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] px-3 text-xs font-medium text-[#b9f55d] transition hover:bg-[#b9f55d]/[0.1] disabled:opacity-50"
+            >
+              <ShieldCheck size={14} /> Host environment
+            </button>
+          )}
           <button
             onClick={downloadEnv}
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.085] px-3 text-xs font-medium text-white/55 transition hover:bg-white/[0.04] hover:text-white"
@@ -367,7 +529,8 @@ export default function EnvironmentDashboard() {
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]"
+            disabled={isLocked || isSaving}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] disabled:pointer-events-none disabled:opacity-40"
           >
             <Plus size={14} strokeWidth={2.5} /> Add secret
           </button>
