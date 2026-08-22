@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { findRuntimeToken, hasValidLocalTokenFormat } from "../config.js";
+import { apiBaseUrl, findRuntimeToken, hasValidLocalTokenFormat } from "../config.js";
 
 const token = `ps_live_${"a".repeat(43)}`;
 let tempDir = "";
@@ -41,5 +41,17 @@ describe("runtime token discovery", () => {
   it("fails local validation for malformed tokens", () => {
     expect(hasValidLocalTokenFormat(token)).toBe(true);
     expect(hasValidLocalTokenFormat("ps_live_short")).toBe(false);
+  });
+
+  it("uses the local API from the Passway workspace", () => {
+    fs.mkdirSync(path.join(tempDir, "apps/api"), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, "apps/api/package.json"), "{}");
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+    try {
+      expect(apiBaseUrl()).toBe("http://localhost:4000");
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 });

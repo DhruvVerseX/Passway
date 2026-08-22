@@ -43,5 +43,6 @@ export function hasValidLocalTokenFormat(token: string) {
 }
 
 export function apiBaseUrl() {
-  return (process.env.PASSWAY_API_URL ?? "https://api.passway.co.in").replace(/\/$/, "");
+  const local = fs.existsSync(path.join(process.cwd(), "apps/api/package.json"));
+  return (process.env.PASSWAY_API_URL ?? (local ? "http://localhost:4000" : "https://api.passway.co.in")).replace(/\/$/, "");
 }
