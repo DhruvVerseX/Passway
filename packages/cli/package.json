@@ -12,7 +12,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "bun run src/index.ts start",
+    "start": "PASSWAY_API_URL=http://localhost:4000 bun --cwd ../.. packages/cli/src/index.ts start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "bun build src/index.ts --outdir dist --target node",
