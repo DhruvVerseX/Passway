@@ -13,9 +13,17 @@ export function printMissingToken() {
   line("passway start");
 }
 
-export function printInvalidToken() {
+export function printInvalidToken(token: string) {
   line("Passway\n");
-  line("[x] The Passway token format is invalid.");
+  line("[x] The Passway token format is invalid.\n");
+  line(`Current token length: ${token.length}`);
+  line("Required format: ps_live_<43 base64url characters>");
+  line("Required token length: 51");
+  if (!token.startsWith("ps_live_")) {
+    line("The token must start with ps_live_.");
+  } else if (token.length !== 51) {
+    line("The token appears truncated. Copy the complete token from the hosting success dialog.");
+  }
 }
 
 export function printConnectionFailure(result: Exclude<StatusResult, { kind: "success" }>) {
