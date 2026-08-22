@@ -31,7 +31,7 @@ import { RuntimeTokenDialog } from "@/components/runtime-token-dialog";
 import {
   createSecret,
   deleteSecret,
-  getConfiguredProjectId,
+  resolveProjectId,
   hostEnvironment,
   importEnv,
   listEnvironments,
@@ -281,11 +281,12 @@ export default function EnvironmentDashboard() {
         status: "draft",
       };
 
-  const environmentId = (environment as StoredEnvironment).id;
+  const environmentId = (environment as StoredEnvironment).id ?? slug;
   const [secrets, setSecrets] = useState<Secret[]>(environment.secrets ?? []);
   const [backendEnvironment, setBackendEnvironment] =
     useState<StoredEnvironment | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(getConfiguredProjectId()));
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [runtimeToken, setRuntimeToken] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -299,16 +300,25 @@ export default function EnvironmentDashboard() {
   useEffect(() => {
     let active = true;
     const load = async () => {
-      const projectId = getConfiguredProjectId();
-      if (!projectId) return;
+      setIsLoading(true);
+      setLoadError(null);
       try {
+        const projectId = await resolveProjectId();
+        if (!projectId) {
+          if (active) setLoadError("No Passway project is available.");
+          return;
+        }
         const environments = await listEnvironments(projectId);
         const matched = environments.environments.find(
           (item) =>
             item.id === environmentId ||
             item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug,
         );
-        if (!matched || !active) return;
+        if (!matched) {
+          if (active) setLoadError("Environment was not found.");
+          return;
+        }
+        if (!active) return;
         setBackendEnvironment({
           id: matched.id,
           name: matched.name,
@@ -322,8 +332,14 @@ export default function EnvironmentDashboard() {
         });
         const result = await listSecrets(matched.id);
         if (active) setSecrets(result.secrets.map(fromApiSecret));
-      } catch {
-        // Keep the local preview state visible when the backend is unavailable.
+      } catch (error) {
+        if (active) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load this environment.",
+          );
+        }
       } finally {
         if (active) setIsLoading(false);
       }
@@ -335,6 +351,9 @@ export default function EnvironmentDashboard() {
   }, [environmentId, slug]);
 
   const currentEnvironment = backendEnvironment ?? environment;
+  const displayName =
+    backendEnvironment?.name ??
+    (isLoading ? "Loading environment…" : "Environment unavailable");
   const isLocked =
     currentEnvironment.status === "locked" ||
     currentEnvironment.status === "hosted";
@@ -490,7 +509,7 @@ export default function EnvironmentDashboard() {
   };
 
   return (
-    <ControlPlaneShell active="Environments" title={environment.name}>
+    <ControlPlaneShell active="Environments" title={displayName}>
       <RuntimeTokenDialog
         token={runtimeToken}
         environmentName={currentEnvironment.name}
@@ -517,17 +536,22 @@ export default function EnvironmentDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <h1 className="text-[30px] font-semibold tracking-[-0.045em] text-white sm:text-[36px]">
-              {environment.name}
+              {displayName}
             </h1>
-            <span
-              className={`rounded-md border px-2 py-1 text-[10px] font-medium ${typeTone[environment.type]}`}
-            >
-              {environment.type}
-            </span>
+            {backendEnvironment && (
+              <span
+                className={`rounded-md border px-2 py-1 text-[10px] font-medium ${typeTone[currentEnvironment.type]}`}
+              >
+                {currentEnvironment.type}
+              </span>
+            )}
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
-            {environment.description ||
-              "Secure runtime configuration for this environment."}
+            {isLoading
+              ? "Loading secure runtime configuration..."
+              : backendEnvironment?.description ||
+                loadError ||
+                "Environment data is unavailable."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -717,7 +741,7 @@ export default function EnvironmentDashboard() {
                             {secret.key}
                           </h3>
                           <p className="mt-1 text-[10px] text-white/25">
-                            Scoped to {environment.name}
+                            Scoped to {currentEnvironment.name}
                           </p>
                         </div>
                       </div>
