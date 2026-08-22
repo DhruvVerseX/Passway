@@ -327,12 +327,13 @@ export default function CreateEnvironmentPage() {
                         file.
                       </p>
                       <span className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#b9f55d]">
-                        {uploadName || "Choose a file"} <FileUp size={13} />
+                        {uploadName || "Choose a file only"} <FileUp size={13} />
                       </span>
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".env,.txt"
+                        accept=".env,.txt,text/plain"
+                        multiple={false}
                         className="hidden"
                         onChange={(event) => {
                           const file = event.target.files?.[0];

@@ -193,7 +193,7 @@ function AddSecretModal({
               <FileUp size={18} />
             </span>
             <p className="mt-4 text-sm font-medium text-white/75">
-              {fileName || "Choose an environment file"}
+              {fileName || "Choose an environment file only"}
             </p>
             <p className="mt-1 text-xs text-white/30">
               Only key/value pairs are imported. Comments are ignored.
@@ -207,7 +207,8 @@ function AddSecretModal({
             <input
               ref={fileRef}
               type="file"
-              accept=".env,.txt"
+              accept=".env,.txt,text/plain"
+              multiple={false}
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0];

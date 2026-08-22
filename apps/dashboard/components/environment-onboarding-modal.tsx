@@ -312,12 +312,13 @@ export function EnvironmentOnboardingModal({
                     Import key/value pairs from an existing environment file.
                   </p>
                   <span className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-medium text-[#b9f55d]">
-                    {fileName || "Choose a file"} <FileUp size={12} />
+                    {fileName || "Choose a file only"} <FileUp size={12} />
                   </span>
                   <input
                     ref={fileRef}
                     type="file"
-                    accept=".env,.txt"
+                    accept=".env,.txt,text/plain"
+                    multiple={false}
                     className="hidden"
                     onChange={(event) => {
                       const file = event.target.files?.[0];
