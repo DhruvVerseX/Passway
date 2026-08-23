@@ -26,8 +26,8 @@ function appRuntimeError(error: unknown, res: Parameters<Parameters<typeof envir
   if (!(error instanceof AppRuntimeError)) return undefined;
   if (error.code === "NOT_FOUND") return res.status(404).json({ error: "Not found" });
   if (error.code === "ENVIRONMENT_NOT_HOSTED") return res.status(409).json({ error: "Environment is not hosted" });
-  if (error.code === "INVALID_CONFIG") return res.status(422).json({ error: "App has no valid encrypted configuration" });
-  return res.status(409).json({ error: "App runtime is already hosted" });
+  if (error.code === "INVALID_CONFIG") return res.status(422).json({ error: "Vault has no valid encrypted configuration" });
+  return res.status(409).json({ error: "Vault runtime is already hosted" });
 }
 
 environmentsRouter.post("/apps/:appId/host", requireAuth, async (req, res) => {
@@ -43,7 +43,7 @@ environmentsRouter.post("/apps/:appId/host", requireAuth, async (req, res) => {
 environmentsRouter.post("/apps/:appId/disable-runtime", requireAuth, async (req, res) => {
   try {
     const disabled = await disableAppRuntime(req.params.appId, req.passwayUser!.id, req.ip ?? "unknown");
-    if (!disabled) return res.status(409).json({ error: "App runtime is not hosted" });
+    if (!disabled) return res.status(409).json({ error: "Vault runtime is not hosted" });
     return res.json(disabled);
   } catch (error) {
     const response = appRuntimeError(error, res);

@@ -26,7 +26,7 @@ type EnvironmentType =
   "Production" | "Development" | "Staging" | "Preview" | "Testing" | "CI/CD";
 type SecretDraft = { id: string; key: string; value: string };
 
-const steps = ["App details", "Add secrets", "Review & create"];
+const steps = ["Vault details", "Add secrets", "Review & create"];
 const environmentTypes: {
   name: EnvironmentType;
   detail: string;
@@ -119,7 +119,7 @@ export default function CreateEnvironmentPage() {
   const next = () => {
     setError(null);
     if (step === 1 && !name.trim()) {
-      setError("Give this app a name to continue.");
+      setError("Give this vault a name to continue.");
       return;
     }
     if (step < 3) setStep((current) => current + 1);
@@ -141,8 +141,8 @@ export default function CreateEnvironmentPage() {
 
   return (
     <ControlPlaneShell
-      active="Apps"
-      title={step === 1 ? "Create App" : name || "New App"}
+      active="Vaults"
+      title={step === 1 ? "Create Vault" : name || "New Vault"}
       showCreate={false}
     >
       <div className="mx-auto max-w-5xl">
@@ -156,13 +156,13 @@ export default function CreateEnvironmentPage() {
             </Link>
             <div className="flex items-center gap-2 text-[11px] font-medium text-[#b9f55d]/80">
               <span className="h-1.5 w-1.5 rounded-full bg-[#b9f55d]" />{" "}
-              App onboarding
+              Vault onboarding
             </div>
             <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.045em] text-white sm:text-[32px]">
-              Create an app.
+              Create a vault.
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
-              Give your application a secure boundary for runtime configuration,
+              Give your vault a secure boundary for runtime configuration,
               then add the values it needs.
             </p>
           </div>
@@ -210,7 +210,7 @@ export default function CreateEnvironmentPage() {
                     </span>
                     <div>
                       <h2 className="text-sm font-semibold text-white/90">
-                        App details
+                        Vault details
                       </h2>
                       <p className="mt-1 text-xs leading-5 text-white/35">
                         Name the boundary and tell your team what it is used
@@ -221,7 +221,7 @@ export default function CreateEnvironmentPage() {
                   <div className="mt-5 space-y-4">
                     <label className="block">
                       <span className="mb-2 block text-xs font-medium text-white/65">
-                        App name
+                        Vault name
                       </span>
                       <input
                         autoFocus
@@ -280,14 +280,14 @@ export default function CreateEnvironmentPage() {
                         value={description}
                         onChange={(event) => setDescription(event.target.value)}
                         className="min-h-20 w-full resize-y rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]"
-                        placeholder="What does this app do?"
+                        placeholder="What does this vault protect?"
                       />
                     </label>
                   </div>
                 </div>
                 <div className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.018] p-4 text-xs leading-5 text-white/40">
                   <Info size={15} className="shrink-0 text-white/35" /> You can
-                  create additional apps later without duplicating your
+                  create additional vaults later without duplicating your
                   workspace.
                 </div>
               </div>
@@ -429,7 +429,7 @@ export default function CreateEnvironmentPage() {
                       No secrets added yet
                     </p>
                     <p className="mt-1 text-xs text-white/30">
-                      You can skip this step and add them from the app dashboard.
+                      You can skip this step and add them from the vault dashboard.
                     </p>
                   </div>
                 )}
@@ -448,7 +448,7 @@ export default function CreateEnvironmentPage() {
                         Review & create
                       </h2>
                       <p className="mt-1 text-xs leading-5 text-white/35">
-                        Check the app details before creating its secure
+                        Check the vault details before creating its secure
                         boundary.
                       </p>
                     </div>
@@ -498,7 +498,7 @@ export default function CreateEnvironmentPage() {
                       Secure by default.
                     </span>{" "}
                     Values are encrypted before being stored and scoped to this
-                    app.
+                    vault.
                   </p>
                 </div>
               </div>
@@ -526,7 +526,7 @@ export default function CreateEnvironmentPage() {
                 onClick={next}
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#b9f55d] px-4 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"
               >
-                {step === 3 ? "Create App" : "Continue"}
+                {step === 3 ? "Create Vault" : "Continue"}
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -535,7 +535,7 @@ export default function CreateEnvironmentPage() {
             <div className="overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.025]">
               <div className="border-b border-white/[0.065] p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/25">
-                  App preview
+                  Vault preview
                 </p>
                 <div className="mt-4 flex items-center gap-3">
                   <img
@@ -545,7 +545,7 @@ export default function CreateEnvironmentPage() {
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white/85">
-                      {name || "Your app"}
+                      {name || "Your vault"}
                     </p>
                     <p className="mt-0.5 text-[11px] text-white/35">
                       {type} · {secrets.length} secrets

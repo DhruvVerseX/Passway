@@ -25,7 +25,7 @@ const navigation = [
     href: "/dashboard/secrets",
     count: "24",
   },
-  { label: "Apps", icon: Box, href: "/dashboard/environments" },
+  { label: "Vaults", icon: Box, href: "/dashboard/environments" },
   { label: "Access", icon: Users, href: "/dashboard/access" },
   { label: "Audit log", icon: Activity, href: "/dashboard/audit" },
 ];
@@ -198,14 +198,14 @@ export function ControlPlaneShell({
                   href="/dashboard/environments"
                   className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.09] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.04] hover:text-white sm:inline-flex"
                 >
-                  <Box size={14} /> New app
+                  <Box size={14} /> New vault
                 </Link>
                 <Link
                   href="/dashboard/environments"
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"
                 >
                   <Plus size={14} strokeWidth={2.5} />
-                  <span className="hidden sm:inline">Create App</span>
+                  <span className="hidden sm:inline">Create Vault</span>
                   <span className="sm:hidden">Create</span>
                 </Link>
               </>

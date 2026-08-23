@@ -96,7 +96,7 @@ export default function EnvironmentsPage() {
           setLoadError(
             error instanceof Error
               ? error.message
-              : "Unable to load apps from Passway.",
+              : "Unable to load vaults from Passway.",
           );
         }
       }
@@ -183,8 +183,8 @@ export default function EnvironmentsPage() {
 
   return (
     <ControlPlaneShell
-      active="Apps"
-      title="Apps"
+      active="Vaults"
+      title="Vaults"
       showCreate={false}
     >
       <EnvironmentOnboardingModal
@@ -203,27 +203,27 @@ export default function EnvironmentsPage() {
         <div>
           <div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[#b9f55d]/80">
             <span className="h-2 w-2 rounded-full bg-[#b9f55d]" /> Workspace
-            apps
+            vaults
           </div>
           <h1 className="text-[30px] font-semibold tracking-[-0.045em] text-white sm:text-[34px]">
-            Apps
+            Vaults
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
-            Host each application with isolated secrets and runtime access.
+            Manage each vault with isolated secrets and runtime access.
           </p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
           className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72]"
         >
-          <Plus size={14} strokeWidth={2.5} /> Create App
+          <Plus size={14} strokeWidth={2.5} /> Create Vault
         </button>
       </div>
 
       <section className="mt-8">
         <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.075] bg-white/[0.018]">
           <div className="hidden grid-cols-[1.35fr_1fr_1fr_.8fr_124px] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/25 lg:grid">
-            <span>App</span>
+            <span>Vault</span>
             <span>Type</span>
             <span>Status</span>
             <span>Secrets</span>
@@ -232,7 +232,7 @@ export default function EnvironmentsPage() {
           {isLoading ? (
             <div
               className="divide-y divide-white/[0.055]"
-              aria-label="Loading apps"
+              aria-label="Loading vaults"
             >
               {[0, 1, 2].map((item) => (
                 <div
@@ -344,12 +344,12 @@ export default function EnvironmentsPage() {
                     </button>
                     {openActionsId === environment.id && (
                       <div className="absolute right-0 top-10 z-20 min-w-44 overflow-hidden rounded-xl border border-white/10 bg-[#171b14] p-1 shadow-2xl" role="menu">
-                        <Link href={`/dashboard/${environment.id}`} onClick={() => setOpenActionsId(null)} className="block rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Open app</Link>
+                        <Link href={`/dashboard/${environment.id}`} onClick={() => setOpenActionsId(null)} className="block rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Open vault</Link>
                         {environment.apiStatus === "draft" && (
-                          <button onClick={() => void lock(environment)} disabled={lockingId === environment.id} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white disabled:opacity-50" role="menuitem"><LockKeyhole size={13} /> {lockingId === environment.id ? "Locking…" : "Lock app"}</button>
+                          <button onClick={() => void lock(environment)} disabled={lockingId === environment.id} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white disabled:opacity-50" role="menuitem"><LockKeyhole size={13} /> {lockingId === environment.id ? "Locking…" : "Lock vault"}</button>
                         )}
                         <button onClick={() => void copyLink(environment)} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Copy dashboard link</button>
-                        <button onClick={() => void remove(environment)} disabled={removingId === environment.id} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-red-300/80 hover:bg-red-400/10 hover:text-red-200 disabled:opacity-50" role="menuitem">{removingId === environment.id ? "Removing…" : "Remove app"}</button>
+                        <button onClick={() => void remove(environment)} disabled={removingId === environment.id} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-red-300/80 hover:bg-red-400/10 hover:text-red-200 disabled:opacity-50" role="menuitem">{removingId === environment.id ? "Removing…" : "Remove vault"}</button>
                       </div>
                     )}
                   </div>
@@ -363,12 +363,12 @@ export default function EnvironmentsPage() {
               </span>
               <p className="mt-3 text-sm font-medium text-white/60">
                 {loadError
-                  ? "Unable to load apps"
-                  : "No apps found"}
+                  ? "Unable to load vaults"
+                  : "No vaults found"}
               </p>
               <p className="mt-1 max-w-md text-xs text-white/30">
                 {loadError ??
-                  "Create an app to start hosting encrypted secrets and runtime access."}
+                  "Create a vault to start hosting encrypted secrets and runtime access."}
               </p>
             </div>
           )}
@@ -376,10 +376,10 @@ export default function EnvironmentsPage() {
       </section>
       <footer className="mt-8 flex flex-col gap-2 border-t border-white/[0.06] py-5 text-[10px] text-white/22 sm:flex-row sm:items-center sm:justify-between">
         <p>
-          Each app has its own encrypted values, tokens, and access
+          Each vault has its own encrypted values, tokens, and access
           policy.
         </p>
-        <span>{environments.length} apps in workspace</span>
+        <span>{environments.length} vaults in workspace</span>
       </footer>
     </ControlPlaneShell>
   );

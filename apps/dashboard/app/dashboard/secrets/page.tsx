@@ -272,7 +272,7 @@ export default function SecretsPage() {
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
             One controlled place for runtime configuration. Values are encrypted
-            at rest and released only to scoped applications.
+            at rest and released only to scoped vaults.
           </p>
         </div>
         <button

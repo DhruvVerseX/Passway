@@ -21,7 +21,7 @@ export function printInvalidToken() {
 
 export function printMissingApp() {
   line("Passway\n");
-  line("✗ No linked Passway App found.\n");
+  line("✗ No linked Passway Vault found.\n");
   line("Add .passway.json to this project:\n");
   line('{ "appId": "your-app-id" }');
 }
@@ -35,8 +35,8 @@ export function printConnectionFailure(result: Exclude<StatusResult, { kind: "su
     line("✗ Environment is not hosted.\n");
     line("Open Passway and host this environment first.");
   } else if (result.kind === "app_disabled") {
-    line("✗ App runtime is disabled.\n");
-    line("Enable Host App in the Passway dashboard.");
+    line("✗ Vault runtime is disabled.\n");
+    line("Enable Host Vault in the Passway dashboard.");
   } else if (result.kind === "unhealthy") {
     line("✗ Secret health verification failed.\n");
     line("Your secrets were not exposed.");
@@ -55,11 +55,11 @@ export function printSuccess(status: RuntimeStatus) {
   line(dim("Secure runtime connection\n"));
   line(`${green("✓")} Passway token found`);
   line(`${green("✓")} Connected to Passway Cloud`);
-  line(`${green("✓")} ${status.app.name} App linked`);
+  line(`${green("✓")} ${status.app.name} Vault linked`);
   line(`${green("✓")} ${status.secretCount} secrets available`);
   line(`${green("✓")} Secret delivery verified\n`);
   line(frame("Runtime connection", [
-    `App          ${status.app.name}`,
+    `Vault        ${status.app.name}`,
     `Environment  ${status.environment.name}`,
     `State        ${green("HEALTHY")}`,
     `Secrets      ${status.secretCount}`,

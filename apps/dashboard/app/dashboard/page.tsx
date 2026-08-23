@@ -103,7 +103,7 @@ const navigation = [
     count: "24",
     href: "/dashboard/secrets",
   },
-  { label: "Apps", icon: Box, href: "/dashboard/environments" },
+  { label: "Vaults", icon: Box, href: "/dashboard/environments" },
   { label: "Access", icon: Users, href: "#" },
   { label: "Audit log", icon: Activity, href: "#" },
 ];
@@ -235,7 +235,7 @@ function CreateKeyModal({
               Create an SDK key
             </h2>
             <p className="mt-1.5 text-sm leading-6 text-white/45">
-              Keys identify an application. Secret values stay encrypted and are
+              Keys identify a vault. Secret values stay encrypted and are
               never included in the key itself.
             </p>
           </div>
@@ -523,14 +523,14 @@ export default function PasswayDashboard() {
               onClick={() => setEnvironmentOpen(true)}
               className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.09] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.04] hover:text-white sm:inline-flex"
             >
-              <Box size={14} /> New app
+              <Box size={14} /> New vault
             </button>
             <button
               onClick={() => setEnvironmentOpen(true)}
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"
             >
               <Plus size={14} strokeWidth={2.5} />{" "}
-              <span className="hidden sm:inline">Create App</span>
+              <span className="hidden sm:inline">Create Vault</span>
               <span className="sm:hidden">Create</span>
             </button>
           </div>
@@ -550,7 +550,7 @@ export default function PasswayDashboard() {
                 Security control plane
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
-                Manage how your applications access encrypted secrets-without
+                Manage how your vaults access encrypted secrets without
                 exposing secret values to source code, logs, or team members.
               </p>
             </div>
@@ -702,7 +702,7 @@ export default function PasswayDashboard() {
                   SDK keys
                 </h2>
                 <p className="mt-1 text-xs text-white/35">
-                  Application identities used to establish encrypted runtime
+                  Vault identities used to establish encrypted runtime
                   sessions.
                 </p>
               </div>

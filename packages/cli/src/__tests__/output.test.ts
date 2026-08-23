@@ -24,7 +24,7 @@ describe("safe CLI output", () => {
     );
 
     expect(output).toContain("18 secrets available");
-    expect(output).toContain("Backend App linked");
+    expect(output).toContain("Backend Vault linked");
     expect(output).toContain("┌─ Runtime connection");
     expect(output).toContain("State        HEALTHY");
     expect(output).toContain("Runtime      HOSTED");

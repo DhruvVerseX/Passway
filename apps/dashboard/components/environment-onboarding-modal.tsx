@@ -151,7 +151,7 @@ export function EnvironmentOnboardingModal({
   const continueFlow = async () => {
     setError(null);
     if (step === 1 && !name.trim()) {
-      setError("Give this app a name to continue.");
+      setError("Give this vault a name to continue.");
       return;
     }
     if (step < 3) {
@@ -195,7 +195,7 @@ export function EnvironmentOnboardingModal({
       setError(
         error instanceof PasswayApiError
           ? error.message
-          : "Unable to create this app right now.",
+          : "Unable to create this vault right now.",
       );
     } finally {
       setIsSubmitting(false);
@@ -218,13 +218,13 @@ export function EnvironmentOnboardingModal({
           <div>
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b9f55d]/75">
               <span className="h-1.5 w-1.5 rounded-full bg-[#b9f55d]" />{" "}
-              App onboarding
+              Vault onboarding
             </div>
             <h2
               id="environment-modal-title"
               className="mt-2 text-lg font-semibold tracking-[-0.025em] text-white"
             >
-              Create an app
+              Create a vault
             </h2>
             <p className="mt-1 text-xs text-white/35">
               Create a secure hosting area for runtime configuration.
@@ -275,7 +275,7 @@ export function EnvironmentOnboardingModal({
               <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-medium text-white/65">
-                    App name
+                    Vault name
                   </span>
                   <input
                     autoFocus
@@ -341,13 +341,13 @@ export function EnvironmentOnboardingModal({
                 <textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  placeholder="What does this app do?"
+                  placeholder="What does this vault protect?"
                   className="min-h-20 w-full resize-y rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-white/25 focus:border-[#b9f55d]/45"
                 />
               </label>
               <div className="flex gap-2 rounded-lg border border-white/[0.07] bg-white/[0.018] px-3 py-2.5 text-[10px] leading-4 text-white/35">
-                <Info size={13} className="mt-0.5 shrink-0 text-white/30" /> You
-                app gets its own isolated secrets, runtime token, and dashboard.
+                <Info size={13} className="mt-0.5 shrink-0 text-white/30" /> Your
+                vault gets its own isolated secrets, runtime token, and dashboard.
               </div>
             </div>
           )}
@@ -462,7 +462,7 @@ export function EnvironmentOnboardingModal({
                     No secrets added yet
                   </p>
                   <p className="mt-1 text-[10px] text-white/25">
-                    You can skip this step and add them from the app dashboard.
+                    You can skip this step and add them from the vault dashboard.
                   </p>
                 </div>
               )}
@@ -515,7 +515,7 @@ export function EnvironmentOnboardingModal({
                     Secure by default.
                   </b>{" "}
                   Values are encrypted before being stored and scoped to this
-                  app.
+                  vault.
                 </span>
               </div>
             </div>
@@ -526,7 +526,7 @@ export function EnvironmentOnboardingModal({
                 <div className="flex items-start gap-3">
                   <span className="grid size-9 place-items-center rounded-xl border border-[#b9f55d]/25 bg-[#b9f55d]/10 text-[#b9f55d]"><CheckCircle2 size={18} /></span>
                   <div>
-                    <p className="text-sm font-semibold text-white/90">Your app is hosted.</p>
+                    <p className="text-sm font-semibold text-white/90">Your vault is hosted.</p>
                     <p className="mt-1 text-xs leading-5 text-white/45">Passway generated a live runtime token for {name}. Copy it now—it will not be shown again.</p>
                   </div>
                 </div>
@@ -536,7 +536,7 @@ export function EnvironmentOnboardingModal({
                 </div>
               </div>
               <div className="flex gap-2 rounded-lg border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2.5 text-[10px] leading-4 text-amber-100/60"><LockKeyhole size={13} className="mt-0.5 shrink-0 text-amber-200/70" /><span><b className="font-medium text-amber-100/85">Treat this like a password.</b> Store it in your CI/CD secret manager. Passway only returns the plaintext token during this hosting response.</span></div>
-              <div className="rounded-xl border border-white/[0.075] bg-white/[0.018] p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/25">What happens next</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><div><p className="text-[11px] font-medium text-white/65">1. Save it</p><p className="mt-1 text-[10px] leading-4 text-white/30">Copy the token into your deployment secret manager.</p></div><div><p className="text-[11px] font-medium text-white/65">2. Connect</p><p className="mt-1 text-[10px] leading-4 text-white/30">Use it with the Passway CLI or runtime SDK.</p></div><div><p className="text-[11px] font-medium text-white/65">3. Manage</p><p className="mt-1 text-[10px] leading-4 text-white/30">Review the hosted app from its dashboard.</p></div></div></div>
+              <div className="rounded-xl border border-white/[0.075] bg-white/[0.018] p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/25">What happens next</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><div><p className="text-[11px] font-medium text-white/65">1. Save it</p><p className="mt-1 text-[10px] leading-4 text-white/30">Copy the token into your deployment secret manager.</p></div><div><p className="text-[11px] font-medium text-white/65">2. Connect</p><p className="mt-1 text-[10px] leading-4 text-white/30">Use it with the Passway CLI or runtime SDK.</p></div><div><p className="text-[11px] font-medium text-white/65">3. Manage</p><p className="mt-1 text-[10px] leading-4 text-white/30">Review the hosted vault from its dashboard.</p></div></div></div>
             </div>
           )}
           {error && (
@@ -563,7 +563,7 @@ export function EnvironmentOnboardingModal({
             disabled={isSubmitting}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#b9f55d] px-3.5 text-[11px] font-semibold text-[#10130d] transition hover:bg-[#c8ff72] focus:outline-none focus:ring-4 focus:ring-[#b9f55d]/20"
           >
-            {isSubmitting ? "Securing app…" : step === 4 ? "Open apps" : step === 3 ? "Create App" : "Continue"}
+            {isSubmitting ? "Securing vault…" : step === 4 ? "Open vaults" : step === 3 ? "Create Vault" : "Continue"}
             <ArrowRight size={13} />
           </button>
         </footer>

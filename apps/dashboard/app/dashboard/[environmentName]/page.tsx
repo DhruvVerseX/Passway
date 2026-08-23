@@ -170,7 +170,7 @@ function AddSecretModal({
               Add secrets
             </h2>
             <p className="mt-1.5 text-sm leading-6 text-white/40">
-              Add values to this app. They are encrypted on save.
+              Add values to this vault. They are encrypted on save.
             </p>
           </div>
           <button
@@ -296,7 +296,7 @@ export default function EnvironmentDashboard() {
     : {
         name: formatName(slug),
         type: "Development" as EnvironmentType,
-        description: "Secure runtime configuration for this app.",
+        description: "Secure runtime configuration for this vault.",
         secrets: [],
         status: "draft",
       };
@@ -336,7 +336,7 @@ export default function EnvironmentDashboard() {
             item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug,
         );
         if (!matched) {
-          if (active) setLoadError("App was not found.");
+          if (active) setLoadError("Vault was not found.");
           return;
         }
         if (!active) return;
@@ -365,7 +365,7 @@ export default function EnvironmentDashboard() {
           setLoadError(
             error instanceof Error
               ? error.message
-              : "Unable to load this app.",
+              : "Unable to load this vault.",
           );
         }
       } finally {
@@ -381,7 +381,7 @@ export default function EnvironmentDashboard() {
   const currentEnvironment = backendEnvironment ?? environment;
   const displayName =
     backendEnvironment?.name ??
-    (isLoading ? "Loading app…" : "App unavailable");
+    (isLoading ? "Loading vault…" : "Vault unavailable");
   const isLocked =
     currentEnvironment.status === "locked" ||
     currentEnvironment.status === "hosted";
@@ -456,7 +456,7 @@ export default function EnvironmentDashboard() {
   };
   const downloadEnv = () => {
     if (isLocked) {
-      notify("Export is unavailable after the app is hosted");
+      notify("Export is unavailable after the vault is hosted");
       return;
     }
     const content = secrets
@@ -501,7 +501,7 @@ export default function EnvironmentDashboard() {
 
   const rotateToken = async () => {
     if (!environmentId) {
-      notify("Open a backend-connected app to rotate its token");
+      notify("Open a backend-connected vault to rotate its token");
       return;
     }
     setIsSaving(true);
@@ -525,9 +525,9 @@ export default function EnvironmentDashboard() {
     try {
       const result = await lockEnvironment(environmentId);
       setBackendEnvironment((current) => current ? { ...current, status: result.environment.status } : current);
-      notify("App locked for hosting");
+      notify("Vault locked for hosting");
     } catch (error) {
-      notify(error instanceof PasswayApiError ? error.message : "Unable to lock app");
+      notify(error instanceof PasswayApiError ? error.message : "Unable to lock vault");
     } finally {
       setIsSaving(false);
     }
@@ -535,7 +535,7 @@ export default function EnvironmentDashboard() {
 
   const hostEnvironmentBundle = async () => {
     if (!environmentId) {
-      notify("Connect this app to the Passway API first");
+      notify("Connect this vault to the Passway API first");
       return;
     }
     setIsSaving(true);
@@ -569,7 +569,7 @@ export default function EnvironmentDashboard() {
       } : current);
       notify(`${currentEnvironment.name} runtime hosted`);
     } catch (error) {
-      notify(error instanceof PasswayApiError ? error.message : "Unable to host app runtime");
+      notify(error instanceof PasswayApiError ? error.message : "Unable to host vault runtime");
     } finally {
       setIsSaving(false);
     }
@@ -587,7 +587,7 @@ export default function EnvironmentDashboard() {
       } : current);
       notify(`${currentEnvironment.name} runtime disabled`);
     } catch (error) {
-      notify(error instanceof PasswayApiError ? error.message : "Unable to disable app runtime");
+      notify(error instanceof PasswayApiError ? error.message : "Unable to disable vault runtime");
     } finally {
       setIsSaving(false);
     }
@@ -616,7 +616,7 @@ export default function EnvironmentDashboard() {
         : "Waiting for connection";
 
   return (
-    <ControlPlaneShell active="Apps" title={displayName}>
+    <ControlPlaneShell active="Vaults" title={displayName}>
       <RuntimeTokenDialog
         token={runtimeToken}
         environmentName={currentEnvironment.name}
@@ -638,7 +638,7 @@ export default function EnvironmentDashboard() {
       <div className="flex flex-col gap-6 border-b border-white/[0.07] pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[#b9f55d]/80">
-            <span className="h-2 w-2 rounded-full bg-[#b9f55d]" /> App
+            <span className="h-2 w-2 rounded-full bg-[#b9f55d]" /> Vault
             control plane
           </div>
           <div className="flex items-center gap-3">
@@ -658,7 +658,7 @@ export default function EnvironmentDashboard() {
               ? "Loading secure runtime configuration..."
               : backendEnvironment?.description ||
                 loadError ||
-                "App data is unavailable."}
+                "Vault data is unavailable."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -678,7 +678,7 @@ export default function EnvironmentDashboard() {
                   disabled={isSaving || secrets.length === 0}
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] disabled:opacity-40"
                 >
-                  <ShieldCheck size={14} /> Host App
+                  <ShieldCheck size={14} /> Host Vault
                 </button>
               )}
               <button
@@ -696,7 +696,7 @@ export default function EnvironmentDashboard() {
               disabled={isSaving}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] px-3 text-xs font-medium text-amber-200/80 transition hover:bg-amber-300/[0.1] disabled:opacity-50"
             >
-              <LockKeyhole size={14} /> Lock app
+              <LockKeyhole size={14} /> Lock vault
             </button>
           )}
           {backendEnvironment &&
@@ -727,7 +727,7 @@ export default function EnvironmentDashboard() {
       </div>
       <nav
         className="mt-6 flex gap-1 overflow-x-auto border-b border-white/[0.07]"
-        aria-label="App navigation"
+        aria-label="Vault navigation"
       >
         {["Secrets", "Tokens", "Access", "Activity", "Settings"].map((tab) => (
           <button
@@ -781,7 +781,7 @@ export default function EnvironmentDashboard() {
                 </span>
               </div>
               <button onClick={() => void copyAppConfig()} className="mt-4 inline-flex items-center gap-1.5 text-[11px] text-white/35 transition hover:text-white/70" title="Copy .passway.json configuration" aria-label="Copy .passway.json configuration">
-                <Clipboard size={12} /> Copy app config
+                <Clipboard size={12} /> Copy vault config
               </button>
             </article>
             <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
@@ -807,16 +807,16 @@ export default function EnvironmentDashboard() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold tracking-[-0.02em] text-white/90">
-                  App secrets
+                  Vault secrets
                 </h2>
                 <p className="mt-1 text-xs text-white/35">
-                  Only applications with a scoped token can request these
+                  Only this vault's linked runtime can request these
                   values.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <label className="relative flex-1 sm:w-56">
-                  <span className="sr-only">Search app secrets</span>
+                  <span className="sr-only">Search vault secrets</span>
                   <Search
                     size={13}
                     className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/25"
@@ -994,7 +994,7 @@ export default function EnvironmentDashboard() {
             {activeTab} for {environment.name}
           </h2>
           <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-white/35">
-            This app-level control surface is ready for the next
+            This vault-level control surface is ready for the next
             configuration step.
           </p>
           <button
@@ -1011,7 +1011,7 @@ export default function EnvironmentDashboard() {
           runtime access.
         </p>
         <div className="flex items-center gap-4">
-          <span>App ID: {environmentId}</span>
+          <span>Vault ID: {environmentId}</span>
           <span>API v1</span>
         </div>
       </footer>

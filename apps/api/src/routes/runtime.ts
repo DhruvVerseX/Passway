@@ -23,7 +23,7 @@ runtimeRouter.get("/runtime/secrets", requireRuntimeToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
     if (!token.runtimeEnabled) {
-      return res.status(423).json({ error: "App runtime is disabled" });
+      return res.status(423).json({ error: "Vault runtime is disabled" });
     }
 
     const secrets = await getRuntimeSecretBundle(appId);
@@ -64,7 +64,7 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
     if (!token.runtimeEnabled && token.runtimeDisabledAt) {
-      return res.status(423).json({ error: "App runtime is disabled" });
+      return res.status(423).json({ error: "Vault runtime is disabled" });
     }
 
     let secretCount: number;
