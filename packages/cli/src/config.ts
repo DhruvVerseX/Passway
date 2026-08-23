@@ -30,8 +30,7 @@ async function tokenFromDotenv(cwd: string) {
 }
 
 export async function findRuntimeToken(cwd = process.cwd()) {
-  const fileToken = await tokenFromDotenv(cwd);
-  return fileToken ?? process.env.PASSWAY_TOKEN?.trim();
+  return process.env.PASSWAY_TOKEN?.trim() || tokenFromDotenv(cwd);
 }
 
 export function hasValidLocalTokenFormat(token: string) {

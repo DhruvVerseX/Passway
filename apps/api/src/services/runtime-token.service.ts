@@ -41,7 +41,6 @@ export async function authenticateRuntimeToken(token: string) {
     !record ||
     record.status !== "active" ||
     record.revoked ||
-    record.environmentStatus !== "hosted" ||
     (record.expiresAt && record.expiresAt.getTime() <= Date.now())
   ) {
     return undefined;

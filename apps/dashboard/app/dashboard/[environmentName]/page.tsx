@@ -578,13 +578,21 @@ export default function EnvironmentDashboard() {
         </div>
         <div className="flex items-center gap-2">
           {backendEnvironment?.status === "hosted" && (
-            <button
-              onClick={rotateToken}
-              disabled={isSaving}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] px-3 text-xs font-medium text-[#b9f55d] transition hover:bg-[#b9f55d]/[0.1] disabled:opacity-50"
-            >
-              <Settings2 size={14} /> Rotate runtime token
-            </button>
+            <>
+              <button
+                disabled
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.08] px-3 text-xs font-medium text-[#b9f55d] opacity-80"
+              >
+                <ShieldCheck size={14} /> Hosted
+              </button>
+              <button
+                onClick={rotateToken}
+                disabled={isSaving}
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] px-3 text-xs font-medium text-[#b9f55d] transition hover:bg-[#b9f55d]/[0.1] disabled:opacity-50"
+              >
+                <Settings2 size={14} /> Rotate runtime token
+              </button>
+            </>
           )}
           {backendEnvironment?.status === "draft" && (
             <button

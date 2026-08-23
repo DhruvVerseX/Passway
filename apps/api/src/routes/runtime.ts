@@ -9,7 +9,9 @@ export const runtimeRouter = Router();
 runtimeRouter.get("/runtime/secrets", requireRuntimeToken, async (req, res) => {
   try {
     const token = await authenticateRuntimeToken(req.runtimeToken!);
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    if (!token || token.environmentStatus !== "hosted") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const secrets = await getRuntimeSecretBundle(token.environmentId);
     touchRuntimeToken(token.id);
@@ -41,8 +43,17 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
   try {
     const token = await authenticateRuntimeToken(req.runtimeToken!);
     if (!token) return res.status(401).json({ error: "Unauthorized" });
+    if (token.environmentStatus !== "hosted") {
+      return res.status(409).json({ error: "Environment not hosted" });
+    }
 
-    const secretCount = await verifyRuntimeSecretBundle(token.environmentId);
+    let secretCount: number;
+    try {
+      secretCount = await verifyRuntimeSecretBundle(token.environmentId);
+      if (secretCount === 0) return res.status(422).json({ error: "Secret health verification failed" });
+    } catch {
+      return res.status(422).json({ error: "Secret health verification failed" });
+    }
     touchRuntimeToken(token.id);
     await writeAudit({
       environmentId: token.environmentId,
@@ -55,10 +66,15 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
     const dashboardBase = (process.env.PASSWAY_DASHBOARD_URL ?? "https://app.passway.co.in").replace(/\/$/, "");
     return res.json({
       connected: true,
-      environment: { name: token.environmentName, status: token.environmentStatus },
+      environment: {
+        id: token.environmentId,
+        name: token.environmentName,
+        status: token.environmentStatus,
+      },
       secretCount,
       delivery: "verified",
-      dashboardUrl: `${dashboardBase}/projects/${token.projectId}`,
+      health: "healthy",
+      healthUrl: `${dashboardBase}/dashboard/${token.environmentId}`,
     });
   } catch {
     return res.status(500).json({ error: "Secret unavailable" });

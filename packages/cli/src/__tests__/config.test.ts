@@ -31,10 +31,14 @@ describe("runtime token discovery", () => {
     await expect(findRuntimeToken(tempDir)).resolves.toBe(token);
   });
 
-  it("does not mask a changed .env token with an inherited token", async () => {
+  it("gives the process environment priority over .env", async () => {
     process.env.PASSWAY_TOKEN = token;
     fs.writeFileSync(path.join(tempDir, ".env"), "PASSWAY_TOKEN=ps_live_short\n");
-    await expect(findRuntimeToken(tempDir)).resolves.toBe("ps_live_short");
+    await expect(findRuntimeToken(tempDir)).resolves.toBe(token);
+  });
+
+  it("returns undefined when the current project has no token", async () => {
+    await expect(findRuntimeToken(tempDir)).resolves.toBeUndefined();
   });
 
   it("fails local validation for malformed tokens", () => {

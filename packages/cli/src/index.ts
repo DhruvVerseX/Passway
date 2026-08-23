@@ -10,7 +10,7 @@ async function start() {
     return 1;
   }
   if (!hasValidLocalTokenFormat(token)) {
-    printInvalidToken(token);
+    printInvalidToken();
     return 1;
   }
 
