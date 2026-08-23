@@ -6,7 +6,14 @@ export async function getOwnedEnvironment(environmentId: string, userId: string)
   const [result] = await db
     .select({
       environmentId: environment.id,
+      environmentName: environment.name,
       status: environment.status,
+      runtimeEnabled: environment.runtimeEnabled,
+      runtimeHostedAt: environment.runtimeHostedAt,
+      runtimeDisabledAt: environment.runtimeDisabledAt,
+      lastConnectedAt: environment.lastConnectedAt,
+      lastHealthCheckAt: environment.lastHealthCheckAt,
+      lastHealthHealthy: environment.lastHealthHealthy,
       projectId: project.id,
       workspaceId: workspace.id,
     })

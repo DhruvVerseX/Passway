@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import {
+  AppRuntimeError,
+  disableAppRuntime,
+  hostAppRuntime,
+} from "../services/app-runtime.service.js";
+import {
   EnvironmentHostingError,
   hostEnvironment,
 } from "../services/environment-hosting.service.js";
@@ -16,6 +21,36 @@ import {
 } from "../services/runtime-token.service.js";
 
 export const environmentsRouter = Router();
+
+function appRuntimeError(error: unknown, res: Parameters<Parameters<typeof environmentsRouter.post>[1]>[1]) {
+  if (!(error instanceof AppRuntimeError)) return undefined;
+  if (error.code === "NOT_FOUND") return res.status(404).json({ error: "Not found" });
+  if (error.code === "ENVIRONMENT_NOT_HOSTED") return res.status(409).json({ error: "Environment is not hosted" });
+  if (error.code === "INVALID_CONFIG") return res.status(422).json({ error: "App has no valid encrypted configuration" });
+  return res.status(409).json({ error: "App runtime is already hosted" });
+}
+
+environmentsRouter.post("/apps/:appId/host", requireAuth, async (req, res) => {
+  try {
+    return res.status(201).json(await hostAppRuntime(req.params.appId, req.passwayUser!.id, req.ip ?? "unknown"));
+  } catch (error) {
+    const response = appRuntimeError(error, res);
+    if (response) return response;
+    throw error;
+  }
+});
+
+environmentsRouter.post("/apps/:appId/disable-runtime", requireAuth, async (req, res) => {
+  try {
+    const disabled = await disableAppRuntime(req.params.appId, req.passwayUser!.id, req.ip ?? "unknown");
+    if (!disabled) return res.status(409).json({ error: "App runtime is not hosted" });
+    return res.json(disabled);
+  } catch (error) {
+    const response = appRuntimeError(error, res);
+    if (response) return response;
+    throw error;
+  }
+});
 
 environmentsRouter.delete(
   "/environments/:environmentId",

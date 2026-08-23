@@ -31,8 +31,10 @@ import { RuntimeTokenDialog } from "@/components/runtime-token-dialog";
 import {
   createSecret,
   deleteSecret,
+  disableAppRuntime,
   resolveProjectId,
   hostEnvironment,
+  hostAppRuntime,
   importEnv,
   listEnvironments,
   listSecrets,
@@ -60,6 +62,12 @@ type StoredEnvironment = {
   description: string;
   secrets?: Secret[];
   status?: ApiEnvironment["status"];
+  runtimeEnabled?: boolean;
+  runtimeHostedAt?: string | null;
+  runtimeDisabledAt?: string | null;
+  lastConnectedAt?: string | null;
+  lastHealthCheckAt?: string | null;
+  lastHealthHealthy?: boolean | null;
 };
 
 const typeTone: Record<EnvironmentType, string> = {
@@ -84,6 +92,18 @@ function fromApiSecret(item: ApiSecret, locked: boolean): Secret {
     updated: new Date(item.updatedAt).toLocaleDateString(),
     locked,
   };
+}
+
+function relativeTime(value?: string | null) {
+  if (!value) return "Never connected";
+  const seconds = Math.round((new Date(value).getTime() - Date.now()) / 1_000);
+  const formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  if (Math.abs(seconds) < 60) return formatter.format(seconds, "second");
+  const minutes = Math.round(seconds / 60);
+  if (Math.abs(minutes) < 60) return formatter.format(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return formatter.format(hours, "hour");
+  return formatter.format(Math.round(hours / 24), "day");
 }
 
 function parseEnv(text: string): Secret[] {
@@ -330,6 +350,12 @@ export default function EnvironmentDashboard() {
                   matched.type.slice(1)) as EnvironmentType),
           description: matched.description ?? "",
           status: matched.status,
+          runtimeEnabled: matched.runtimeEnabled,
+          runtimeHostedAt: matched.runtimeHostedAt,
+          runtimeDisabledAt: matched.runtimeDisabledAt,
+          lastConnectedAt: matched.lastConnectedAt,
+          lastHealthCheckAt: matched.lastHealthCheckAt,
+          lastHealthHealthy: matched.lastHealthHealthy,
         });
         const result = await listSecrets(matched.id);
         const secretsLocked = matched.status === "locked" || matched.status === "hosted";
@@ -507,7 +533,7 @@ export default function EnvironmentDashboard() {
     }
   };
 
-  const host = async () => {
+  const hostEnvironmentBundle = async () => {
     if (!environmentId) {
       notify("Connect this app to the Passway API first");
       return;
@@ -523,12 +549,71 @@ export default function EnvironmentDashboard() {
       notify(
         error instanceof PasswayApiError
           ? error.message
-          : "Unable to host app",
+          : "Unable to host environment",
       );
     } finally {
       setIsSaving(false);
     }
   };
+
+  const hostApp = async () => {
+    if (!environmentId) return;
+    setIsSaving(true);
+    try {
+      const result = await hostAppRuntime(environmentId);
+      setBackendEnvironment((current) => current ? {
+        ...current,
+        runtimeEnabled: true,
+        runtimeHostedAt: result.hostedAt ?? new Date().toISOString(),
+        runtimeDisabledAt: null,
+      } : current);
+      notify(`${currentEnvironment.name} runtime hosted`);
+    } catch (error) {
+      notify(error instanceof PasswayApiError ? error.message : "Unable to host app runtime");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const disableRuntime = async () => {
+    if (!environmentId) return;
+    setIsSaving(true);
+    try {
+      const result = await disableAppRuntime(environmentId);
+      setBackendEnvironment((current) => current ? {
+        ...current,
+        runtimeEnabled: false,
+        runtimeDisabledAt: result.disabledAt ?? new Date().toISOString(),
+      } : current);
+      notify(`${currentEnvironment.name} runtime disabled`);
+    } catch (error) {
+      notify(error instanceof PasswayApiError ? error.message : "Unable to disable app runtime");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const copyAppConfig = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify({ appId: environmentId }, null, 2));
+      notify(".passway.json config copied");
+    } catch {
+      notify("Clipboard is unavailable");
+    }
+  };
+
+  const runtimeStatus = currentEnvironment.runtimeEnabled
+    ? "Hosted"
+    : currentEnvironment.runtimeDisabledAt
+      ? "Disabled"
+      : "Not hosted";
+  const runtimeHealth = currentEnvironment.runtimeDisabledAt && !currentEnvironment.runtimeEnabled
+    ? "Disabled"
+    : currentEnvironment.lastHealthHealthy === false
+      ? "Unhealthy"
+      : currentEnvironment.runtimeEnabled && currentEnvironment.lastHealthHealthy
+        ? "Healthy"
+        : "Waiting for connection";
 
   return (
     <ControlPlaneShell active="Apps" title={displayName}>
@@ -576,15 +661,26 @@ export default function EnvironmentDashboard() {
                 "App data is unavailable."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {backendEnvironment?.status === "hosted" && (
             <>
-              <button
-                disabled
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.08] px-3 text-xs font-medium text-[#b9f55d] opacity-80"
-              >
-                <ShieldCheck size={14} /> Hosted
-              </button>
+              {backendEnvironment.runtimeEnabled ? (
+                <button
+                  onClick={() => void disableRuntime()}
+                  disabled={isSaving}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-red-300/20 bg-red-300/[0.05] px-3 text-xs font-medium text-red-200/80 transition hover:bg-red-300/[0.1] disabled:opacity-50"
+                >
+                  <LockKeyhole size={14} /> Disable runtime
+                </button>
+              ) : (
+                <button
+                  onClick={() => void hostApp()}
+                  disabled={isSaving || secrets.length === 0}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#b9f55d] px-3.5 text-xs font-semibold text-[#10130d] transition hover:bg-[#c8ff72] disabled:opacity-40"
+                >
+                  <ShieldCheck size={14} /> Host App
+                </button>
+              )}
               <button
                 onClick={rotateToken}
                 disabled={isSaving}
@@ -607,11 +703,11 @@ export default function EnvironmentDashboard() {
             backendEnvironment.status !== "hosted" &&
             backendEnvironment.status !== "disabled" && (
               <button
-                onClick={host}
+                onClick={hostEnvironmentBundle}
                 disabled={isSaving}
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#b9f55d]/25 bg-[#b9f55d]/[0.06] px-3 text-xs font-medium text-[#b9f55d] transition hover:bg-[#b9f55d]/[0.1] disabled:opacity-50"
               >
-                <ShieldCheck size={14} /> Host app
+                <ShieldCheck size={14} /> Host environment
               </button>
             )}
           <button
@@ -674,36 +770,36 @@ export default function EnvironmentDashboard() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-[13px] font-medium text-white/45">
-                    Runtime tokens
+                    Runtime
                   </p>
-                  <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
-                    2
+                  <p className={`mt-3 text-xl font-semibold ${runtimeStatus === "Hosted" ? "text-[#b9f55d]" : "text-white"}`}>
+                    {runtimeStatus}
                   </p>
                 </div>
                 <span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/50">
                   <KeyRound size={16} />
                 </span>
               </div>
-              <p className="mt-4 text-[11px] text-white/35">
-                1 token used in the last 24h
-              </p>
+              <button onClick={() => void copyAppConfig()} className="mt-4 inline-flex items-center gap-1.5 text-[11px] text-white/35 transition hover:text-white/70" title="Copy .passway.json configuration" aria-label="Copy .passway.json configuration">
+                <Clipboard size={12} /> Copy app config
+              </button>
             </article>
             <article className="rounded-2xl border border-white/[0.075] bg-white/[0.025] p-5">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-[13px] font-medium text-white/45">
-                    Access policy
+                    Connection health
                   </p>
-                  <p className="mt-3 text-[26px] font-semibold tracking-[-0.04em] text-white">
-                    Strict
+                  <p className={`mt-3 text-xl font-semibold ${runtimeHealth === "Healthy" ? "text-emerald-300" : runtimeHealth === "Unhealthy" ? "text-red-300" : "text-white"}`}>
+                    {runtimeHealth}
                   </p>
                 </div>
-                <span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-emerald-300">
+                <span className={`grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] ${runtimeHealth === "Healthy" ? "text-emerald-300" : runtimeHealth === "Unhealthy" ? "text-red-300" : "text-white/40"}`}>
                   <ShieldCheck size={16} />
                 </span>
               </div>
               <p className="mt-4 text-[11px] text-white/35">
-                Least privilege enabled
+                Last connection: {relativeTime(currentEnvironment.lastConnectedAt)}
               </p>
             </article>
           </section>
@@ -915,7 +1011,7 @@ export default function EnvironmentDashboard() {
           runtime access.
         </p>
         <div className="flex items-center gap-4">
-          <span>App ID: {slug}</span>
+          <span>App ID: {environmentId}</span>
           <span>API v1</span>
         </div>
       </footer>

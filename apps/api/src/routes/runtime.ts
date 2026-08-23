@@ -1,10 +1,16 @@
 import { Router } from "express";
 import { requireRuntimeToken } from "../middleware/runtime-auth.js";
 import { writeAudit } from "../services/audit.service.js";
+import { recordAppHealth } from "../services/app-runtime.service.js";
 import { getRuntimeSecretBundle, verifyRuntimeSecretBundle } from "../services/runtime-secret.service.js";
 import { authenticateRuntimeToken, touchRuntimeToken } from "../services/runtime-token.service.js";
 
 export const runtimeRouter = Router();
+
+function requestedAppId(req: Parameters<typeof requireRuntimeToken>[0]) {
+  const appId = req.header("x-passway-app-id")?.trim();
+  return appId && appId.length <= 128 ? appId : undefined;
+}
 
 runtimeRouter.get("/runtime/secrets", requireRuntimeToken, async (req, res) => {
   try {
@@ -12,8 +18,15 @@ runtimeRouter.get("/runtime/secrets", requireRuntimeToken, async (req, res) => {
     if (!token || token.environmentStatus !== "hosted") {
       return res.status(401).json({ error: "Unauthorized" });
     }
+    const appId = requestedAppId(req);
+    if (!appId || appId !== token.environmentId) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    if (!token.runtimeEnabled) {
+      return res.status(423).json({ error: "App runtime is disabled" });
+    }
 
-    const secrets = await getRuntimeSecretBundle(token.environmentId);
+    const secrets = await getRuntimeSecretBundle(appId);
     touchRuntimeToken(token.id);
     await Promise.all([
       writeAudit({
@@ -46,14 +59,27 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
     if (token.environmentStatus !== "hosted") {
       return res.status(409).json({ error: "Environment not hosted" });
     }
+    const appId = requestedAppId(req);
+    if (!appId || appId !== token.environmentId) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    if (!token.runtimeEnabled && token.runtimeDisabledAt) {
+      return res.status(423).json({ error: "App runtime is disabled" });
+    }
 
     let secretCount: number;
     try {
-      secretCount = await verifyRuntimeSecretBundle(token.environmentId);
-      if (secretCount === 0) return res.status(422).json({ error: "Secret health verification failed" });
+      secretCount = await verifyRuntimeSecretBundle(appId);
+      if (secretCount === 0) {
+        await recordAppHealth(appId, false);
+        return res.status(422).json({ error: "Secret health verification failed" });
+      }
     } catch {
+      await recordAppHealth(appId, false);
       return res.status(422).json({ error: "Secret health verification failed" });
     }
+    const connectedAt = new Date();
+    await recordAppHealth(appId, true, connectedAt);
     touchRuntimeToken(token.id);
     await writeAudit({
       environmentId: token.environmentId,
@@ -61,7 +87,7 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
       workspaceId: token.workspaceId,
       accessTokenId: token.id,
       ip: req.ip ?? "unknown",
-      action: "RUNTIME_CONNECTION_VERIFIED",
+      action: "APP_CONNECTION_VERIFIED",
     });
     const dashboardBase = (process.env.PASSWAY_DASHBOARD_URL ?? "https://app.passway.co.in").replace(/\/$/, "");
     return res.json({
@@ -70,6 +96,12 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
         id: token.environmentId,
         name: token.environmentName,
         status: token.environmentStatus,
+      },
+      app: {
+        id: appId,
+        name: token.environmentName,
+        runtimeStatus: token.runtimeEnabled ? "hosted" : "draft",
+        lastConnectedAt: connectedAt,
       },
       secretCount,
       delivery: "verified",

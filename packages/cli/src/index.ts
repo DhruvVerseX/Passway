@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { fetchRuntimeStatus } from "./api.js";
-import { apiBaseUrl, findRuntimeToken, hasValidLocalTokenFormat } from "./config.js";
-import { printConnectionFailure, printInvalidToken, printMissingToken, printSuccess } from "./output.js";
+import { apiBaseUrl, findAppId, findRuntimeToken, hasValidLocalTokenFormat } from "./config.js";
+import { printConnectionFailure, printInvalidToken, printMissingApp, printMissingToken, printSuccess } from "./output.js";
 
 async function start() {
   const token = await findRuntimeToken();
@@ -13,8 +13,13 @@ async function start() {
     printInvalidToken();
     return 1;
   }
+  const appId = await findAppId();
+  if (!appId) {
+    printMissingApp();
+    return 1;
+  }
 
-  const result = await fetchRuntimeStatus(apiBaseUrl(), token);
+  const result = await fetchRuntimeStatus(apiBaseUrl(), token, appId);
   if (result.kind !== "success") {
     printConnectionFailure(result);
     return 1;

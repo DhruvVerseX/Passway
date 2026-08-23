@@ -15,6 +15,7 @@ describe("safe CLI output", () => {
       printSuccess({
         connected: true,
         environment: { id: "env-1", name: "Production", status: "hosted" },
+        app: { id: "env-1", name: "Backend", runtimeStatus: "hosted", lastConnectedAt: new Date().toISOString() },
         secretCount: 18,
         delivery: "verified",
         health: "healthy",
@@ -23,6 +24,7 @@ describe("safe CLI output", () => {
     );
 
     expect(output).toContain("18 secrets available");
+    expect(output).toContain("Backend App linked");
     expect(output).toContain("https://app.passway.co.in/dashboard/env-1");
     expect(output).not.toContain("ps_live_");
     expect(output).not.toContain("DATABASE_URL");

@@ -128,6 +128,9 @@ export const auditAction = pgEnum("audit_action", [
   "RUNTIME_TOKEN_REVOKED",
   "RUNTIME_SECRET_BUNDLE_READ",
   "RUNTIME_CONNECTION_VERIFIED",
+  "APP_RUNTIME_ENABLED",
+  "APP_RUNTIME_DISABLED",
+  "APP_CONNECTION_VERIFIED",
 ]);
 
 export const workspace = pgTable(
@@ -186,6 +189,12 @@ export const environment = pgTable(
     status: environmentStatus("status").notNull().default("draft"),
     lockedAt: timestamp("locked_at", { withTimezone: true }),
     hostedAt: timestamp("hosted_at", { withTimezone: true }),
+    runtimeEnabled: boolean("runtime_enabled").notNull().default(false),
+    runtimeHostedAt: timestamp("runtime_hosted_at", { withTimezone: true }),
+    runtimeDisabledAt: timestamp("runtime_disabled_at", { withTimezone: true }),
+    lastConnectedAt: timestamp("last_connected_at", { withTimezone: true }),
+    lastHealthCheckAt: timestamp("last_health_check_at", { withTimezone: true }),
+    lastHealthHealthy: boolean("last_health_healthy"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

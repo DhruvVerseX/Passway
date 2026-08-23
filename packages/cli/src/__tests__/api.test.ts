@@ -15,6 +15,7 @@ describe("runtime status API", () => {
         JSON.stringify({
           connected: true,
           environment: { id: "environment-id", name: "production", status: "hosted" },
+          app: { id: "environment-id", name: "Backend", runtimeStatus: "hosted", lastConnectedAt: new Date().toISOString() },
           secretCount: 2,
           delivery: "verified",
           health: "healthy",
@@ -24,37 +25,38 @@ describe("runtime status API", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(fetchRuntimeStatus("https://api.passway.co.in", token)).resolves.toMatchObject({ kind: "success" });
+    await expect(fetchRuntimeStatus("https://api.passway.co.in", token, "environment-id")).resolves.toMatchObject({ kind: "success" });
     expect(fetchMock.mock.calls[0][0]).toBe("https://api.passway.co.in/v1/runtime/status");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: `Bearer ${token}`, "x-passway-app-id": "environment-id" },
     });
     expect(fetchMock.mock.calls[0][1]).not.toHaveProperty("body");
   });
 
   it("normalizes token failures without exposing server details", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
-    await expect(fetchRuntimeStatus("https://api.passway.co.in", token)).resolves.toEqual({ kind: "auth" });
+    await expect(fetchRuntimeStatus("https://api.passway.co.in", token, "environment-id")).resolves.toEqual({ kind: "auth" });
   });
 
   it.each([
     [409, "not_hosted"],
+    [423, "app_disabled"],
     [422, "unhealthy"],
     [429, "rate_limit"],
     [500, "server"],
   ] as const)("maps HTTP %s to %s", async (status, kind) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status })));
-    await expect(fetchRuntimeStatus("https://api.passway.co.in", token)).resolves.toEqual({ kind });
+    await expect(fetchRuntimeStatus("https://api.passway.co.in", token, "environment-id")).resolves.toEqual({ kind });
   });
 
   it("rejects responses that omit health metadata", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ connected: true }))));
-    await expect(fetchRuntimeStatus("https://api.passway.co.in", token)).resolves.toEqual({ kind: "server" });
+    await expect(fetchRuntimeStatus("https://api.passway.co.in", token, "environment-id")).resolves.toEqual({ kind: "server" });
   });
 
   it("handles network failures without exposing the request", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
-    await expect(fetchRuntimeStatus("https://api.passway.co.in", token)).resolves.toEqual({ kind: "network" });
+    await expect(fetchRuntimeStatus("https://api.passway.co.in", token, "environment-id")).resolves.toEqual({ kind: "network" });
   });
 
   it("stops waiting after the existing timeout", async () => {
@@ -63,7 +65,7 @@ describe("runtime status API", () => {
       init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     })));
 
-    const result = fetchRuntimeStatus("https://api.passway.co.in", token);
+    const result = fetchRuntimeStatus("https://api.passway.co.in", token, "environment-id");
     await vi.advanceTimersByTimeAsync(10_000);
     await expect(result).resolves.toEqual({ kind: "timeout" });
   });

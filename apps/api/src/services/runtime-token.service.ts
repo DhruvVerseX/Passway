@@ -27,6 +27,8 @@ export async function authenticateRuntimeToken(token: string) {
       revoked: accessToken.revoked,
       environmentName: environment.name,
       environmentStatus: environment.status,
+      runtimeEnabled: environment.runtimeEnabled,
+      runtimeDisabledAt: environment.runtimeDisabledAt,
       projectId: project.id,
       workspaceId: workspace.id,
     })

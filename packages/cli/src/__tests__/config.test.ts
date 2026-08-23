@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { apiBaseUrl, findRuntimeToken, hasValidLocalTokenFormat } from "../config.js";
+import { apiBaseUrl, findAppId, findRuntimeToken, hasValidLocalTokenFormat } from "../config.js";
 
 const token = `ps_live_${"a".repeat(43)}`;
 let tempDir = "";
@@ -56,5 +56,18 @@ describe("runtime token discovery", () => {
     } finally {
       process.chdir(originalCwd);
     }
+  });
+});
+
+describe("App linking", () => {
+  it("reads the App ID from the current project's .passway.json", async () => {
+    fs.writeFileSync(path.join(tempDir, ".passway.json"), JSON.stringify({ appId: "app-123" }));
+    await expect(findAppId(tempDir)).resolves.toBe("app-123");
+  });
+
+  it.each(["missing", "invalid JSON", "missing appId"])("rejects %s config", async (kind) => {
+    if (kind === "invalid JSON") fs.writeFileSync(path.join(tempDir, ".passway.json"), "{");
+    if (kind === "missing appId") fs.writeFileSync(path.join(tempDir, ".passway.json"), "{}");
+    await expect(findAppId(tempDir)).resolves.toBeUndefined();
   });
 });

@@ -63,6 +63,12 @@ export function environmentMetadata(record: typeof environment.$inferSelect) {
     status: record.status,
     lockedAt: record.lockedAt,
     hostedAt: record.hostedAt,
+    runtimeEnabled: record.runtimeEnabled,
+    runtimeHostedAt: record.runtimeHostedAt,
+    runtimeDisabledAt: record.runtimeDisabledAt,
+    lastConnectedAt: record.lastConnectedAt,
+    lastHealthCheckAt: record.lastHealthCheckAt,
+    lastHealthHealthy: record.lastHealthHealthy,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };

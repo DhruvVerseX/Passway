@@ -16,6 +16,12 @@ export type ApiEnvironment = {
   status: "draft" | "locked" | "hosted" | "disabled";
   lockedAt: string | null;
   hostedAt: string | null;
+  runtimeEnabled: boolean;
+  runtimeHostedAt: string | null;
+  runtimeDisabledAt: string | null;
+  lastConnectedAt: string | null;
+  lastHealthCheckAt: string | null;
+  lastHealthHealthy: boolean | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,6 +41,15 @@ export type ApiRuntimeToken = {
   status: "hosted";
   token: string;
   createdAt: string;
+};
+
+export type ApiAppRuntime = {
+  id: string;
+  name: string;
+  runtimeStatus: "hosted" | "disabled";
+  hostedAt?: string;
+  disabledAt?: string;
+  secretCount?: number;
 };
 
 export type CreateEnvironmentInput = {
@@ -156,6 +171,14 @@ export function hostEnvironment(environmentId: string) {
     `/v1/environments/${encodeURIComponent(environmentId)}/host`,
     { method: "POST" },
   );
+}
+
+export function hostAppRuntime(appId: string) {
+  return request<ApiAppRuntime>(`/v1/apps/${encodeURIComponent(appId)}/host`, { method: "POST" });
+}
+
+export function disableAppRuntime(appId: string) {
+  return request<ApiAppRuntime>(`/v1/apps/${encodeURIComponent(appId)}/disable-runtime`, { method: "POST" });
 }
 
 export function rotateRuntimeToken(environmentId: string) {

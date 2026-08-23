@@ -33,6 +33,17 @@ export async function findRuntimeToken(cwd = process.cwd()) {
   return process.env.PASSWAY_TOKEN?.trim() || tokenFromDotenv(cwd);
 }
 
+export async function findAppId(cwd = process.cwd()) {
+  try {
+    const config = JSON.parse(await fs.promises.readFile(path.join(cwd, ".passway.json"), "utf8")) as unknown;
+    if (!config || typeof config !== "object" || Array.isArray(config)) return undefined;
+    const appId = (config as Record<string, unknown>).appId;
+    return typeof appId === "string" && appId.trim().length <= 128 ? appId.trim() || undefined : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function hasValidLocalTokenFormat(token: string) {
   return TOKEN_PATTERN.test(token);
 }
