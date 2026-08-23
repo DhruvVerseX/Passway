@@ -1,4 +1,5 @@
 import type { RuntimeStatus, StatusResult } from "./api.js";
+import { bold, cyan, dim, frame, green } from "./terminal.js";
 
 function line(value = "") {
   process.stdout.write(`${value}\n`);
@@ -49,13 +50,21 @@ export function printConnectionFailure(result: Exclude<StatusResult, { kind: "su
 }
 
 export function printSuccess(status: RuntimeStatus) {
-  line("Passway\n");
-  line("✓ Passway token found");
-  line(`✓ Connected to ${status.environment.name}`);
-  line(`✓ ${status.app.name} App linked`);
-  line(`✓ ${status.secretCount} secrets available`);
-  line("✓ Secret delivery verified\n");
-  line(`● ${status.app.name} is ${status.app.runtimeStatus === "hosted" ? "healthy" : "ready to host"}\n`);
-  line("Dashboard");
-  line(status.healthUrl);
+  const runtime = status.app.runtimeStatus === "hosted" ? "HOSTED" : "READY TO HOST";
+  line(bold("Passway"));
+  line(dim("Secure runtime connection\n"));
+  line(`${green("✓")} Passway token found`);
+  line(`${green("✓")} Connected to Passway Cloud`);
+  line(`${green("✓")} ${status.app.name} App linked`);
+  line(`${green("✓")} ${status.secretCount} secrets available`);
+  line(`${green("✓")} Secret delivery verified\n`);
+  line(frame("Runtime connection", [
+    `App          ${status.app.name}`,
+    `Environment  ${status.environment.name}`,
+    `State        ${green("HEALTHY")}`,
+    `Secrets      ${status.secretCount}`,
+    `Runtime      ${green(runtime)}`,
+  ], 72));
+  line(`\n${dim("Dashboard")}`);
+  line(cyan(status.healthUrl));
 }

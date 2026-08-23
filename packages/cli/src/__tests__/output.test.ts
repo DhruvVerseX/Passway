@@ -25,6 +25,9 @@ describe("safe CLI output", () => {
 
     expect(output).toContain("18 secrets available");
     expect(output).toContain("Backend App linked");
+    expect(output).toContain("┌─ Runtime connection");
+    expect(output).toContain("State        HEALTHY");
+    expect(output).toContain("Runtime      HOSTED");
     expect(output).toContain("https://app.passway.co.in/dashboard/env-1");
     expect(output).not.toContain("ps_live_");
     expect(output).not.toContain("DATABASE_URL");

@@ -92,8 +92,8 @@ function fit(value: string, width: number) {
   return `${value.replace(/\u001b\[[0-9;]*m/g, "").slice(0, Math.max(0, width - 1))}…`;
 }
 
-export function frame(title: string, lines: string[]) {
-  const width = Math.max(30, Math.min(52, (process.stdout.columns ?? 54) - 2));
+export function frame(title: string, lines: string[], maxWidth = 52) {
+  const width = Math.max(30, Math.min(maxWidth, (process.stdout.columns ?? 54) - 2));
   const inner = width - 2;
   const heading = `─ ${title} `;
   const top = `┌${heading}${"─".repeat(Math.max(0, inner - heading.length))}┐`;
