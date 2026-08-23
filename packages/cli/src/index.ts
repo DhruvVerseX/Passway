@@ -2,6 +2,7 @@
 import { fetchRuntimeStatus } from "./api.js";
 import { apiBaseUrl, findAppId, findRuntimeToken, hasValidLocalTokenFormat } from "./config.js";
 import { printConnectionFailure, printInvalidToken, printMissingApp, printMissingToken, printSuccess } from "./output.js";
+import { runPasswordManager } from "./password-manager.js";
 
 async function start() {
   const token = await findRuntimeToken();
@@ -28,9 +29,8 @@ async function start() {
   return 0;
 }
 
-if (process.argv[2] !== "start") {
-  process.stderr.write("Usage: passway start\n");
-  process.exitCode = 1;
-} else {
+if (process.argv[2] === "start") {
   process.exitCode = await start();
+} else {
+  process.exitCode = await runPasswordManager(process.argv[2], process.argv.slice(3));
 }
