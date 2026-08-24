@@ -1,3 +1,8 @@
 {
-    "appId": "81e1cc87-dbb2-4fd2-ad57-17fa5fc93707"
-  }
+  "appId": "c9c40210-741a-4855-83e8-b7ce78c7f125",
+  "launchCommand": [
+    "bun",
+    "run",
+    "dev"
+  ]
+}

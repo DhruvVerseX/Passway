@@ -89,15 +89,21 @@ On hosting, configure API secrets only on the API service. Dashboard/web should 
 
 ## Secure Runtime Secret Injection
 
-A hosted environment can provide secrets to a local application without the dashboard ever requesting the plaintext bundle. Keep the one-time runtime token in the developer machine's local `.env` as `PASSWAY_TOKEN`, then launch the application through the CLI:
+A hosted environment can provide secrets to a local application without the dashboard ever requesting the plaintext bundle. Keep the one-time runtime token in the developer machine's local `.env` as `PASSWAY_TOKEN`, then set up the project once:
 
 ```bash
-passway start -- npm run dev
-passway start -- bun run dev
+npm install -g @passway/cli
+passway start
+passway run
+```
+
+`passway start` verifies the linked `.passway.json` app, detects the existing launch command such as `npm run dev` or `bun run dev`, and saves that command as `launchCommand` without storing secrets. If detection is not possible, provide it once:
+
+```bash
 passway start -- node server.js
 ```
 
-The CLI authenticates directly to the Passway runtime API over HTTPS, receives the authorized bundle in CLI memory, removes `PASSWAY_TOKEN` from the child process environment, and starts the requested command with the vault keys merged into `process.env`. The application can then read values normally:
+After setup, `passway run` authenticates directly to the Passway runtime API over HTTPS, receives the authorized bundle in CLI memory, removes `PASSWAY_TOKEN` from the child process environment, and starts the saved command with the vault keys merged into `process.env`. The application can then read values normally:
 
 ```ts
 const databaseUrl = process.env.DB_URL;
@@ -105,6 +111,6 @@ const stripeKey = process.env.STRIPE_KEY;
 const jwtSecret = process.env.JWT_SECRET;
 ```
 
-The runtime bundle is not fetched by the dashboard or browser. The API response is marked `no-store`, the CLI does not print secret values, and the child process receives only the application secrets—not the Passway bearer token. Anyone who obtains the bearer token could still call the runtime endpoint, so protect the local `.env`, rotate compromised tokens immediately, and never commit `PASSWAY_TOKEN` or secret values.
+The runtime bundle is not fetched by the dashboard or browser. The API response is marked `no-store`, the CLI does not print secret values, and the child process receives only the application secrets—not the Passway bearer token. Anyone who obtains the bearer token could still call the runtime endpoint, so protect the local `.env`, rotate compromised tokens immediately, and never commit `PASSWAY_TOKEN`, `.env`, or secret values.
 
-For a connection check without launching an application, run `passway start` without a command. For a local workspace, the API defaults to `http://localhost:4000`; for an installed CLI outside the workspace, it defaults to the production API unless `PASSWAY_API_URL` is set.
+For a local Passway workspace, the API defaults to `http://localhost:4000`; for an installed CLI outside the workspace, it defaults to the production API unless `PASSWAY_API_URL` is set.

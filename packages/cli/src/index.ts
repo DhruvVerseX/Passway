@@ -3,20 +3,42 @@ import { spawn } from "node:child_process";
 import { fetchRuntimeSecrets, fetchRuntimeStatus } from "./api.js";
 import {
   apiBaseUrl,
+  detectLaunchCommand,
   findAppId,
   findRuntimeToken,
   hasValidLocalTokenFormat,
+  readProjectConfig,
+  saveProjectConfig,
 } from "./config.js";
 import {
   printConnectionFailure,
   printInvalidToken,
   printMissingApp,
+  printMissingCommand,
   printMissingToken,
+  printRunReady,
   printSecretFailure,
-  printSuccess,
+  printSetupSuccess,
 } from "./output.js";
 import { runPasswordManager } from "./password-manager.js";
 import { childEnvironment, executableForPlatform } from "./runtime.js";
+
+async function verifyRuntime(appId: string, token: string) {
+  const baseUrl = apiBaseUrl();
+  const result = await fetchRuntimeStatus(baseUrl, token, appId);
+  if (result.kind !== "success") {
+    printConnectionFailure(result);
+    return undefined;
+  }
+
+  const secrets = await fetchRuntimeSecrets(baseUrl, token, appId);
+  if (secrets.kind !== "success") {
+    printSecretFailure(secrets);
+    return undefined;
+  }
+
+  return { status: result.status, secrets: secrets.secrets };
+}
 
 async function start(command?: string, args: string[] = []) {
   const token = await findRuntimeToken();
@@ -33,28 +55,48 @@ async function start(command?: string, args: string[] = []) {
     printMissingApp();
     return 1;
   }
-
-  const baseUrl = apiBaseUrl();
-  const result = await fetchRuntimeStatus(baseUrl, token, appId);
-  if (result.kind !== "success") {
-    printConnectionFailure(result);
+  const launchCommand = command ? [command, ...args] : await detectLaunchCommand();
+  if (!launchCommand) {
+    printMissingCommand();
     return 1;
   }
 
-  const secrets = await fetchRuntimeSecrets(baseUrl, token, appId);
-  if (secrets.kind !== "success") {
-    printSecretFailure(secrets);
+  const runtime = await verifyRuntime(appId, token);
+  if (!runtime) return 1;
+
+  await saveProjectConfig({ appId, launchCommand });
+  printSetupSuccess(runtime.status, launchCommand);
+  return 0;
+}
+
+async function run() {
+  const config = await readProjectConfig();
+  if (!config?.appId) {
+    printMissingApp();
+    return 1;
+  }
+  if (!config.launchCommand) {
+    printMissingCommand();
+    return 1;
+  }
+  const token = await findRuntimeToken(process.cwd(), { includeProcessEnv: false });
+  if (!token) {
+    printMissingToken();
+    return 1;
+  }
+  if (!hasValidLocalTokenFormat(token)) {
+    printInvalidToken();
     return 1;
   }
 
-  if (!command) {
-    printSuccess(result.status);
-    return 0;
-  }
+  const runtime = await verifyRuntime(config.appId, token);
+  if (!runtime) return 1;
 
+  printRunReady(runtime.status, config.launchCommand);
+  const [command, ...args] = config.launchCommand;
   const child = spawn(executableForPlatform(command), args, {
     cwd: process.cwd(),
-    env: childEnvironment(process.env, secrets.secrets),
+    env: childEnvironment(process.env, runtime.secrets),
     stdio: "inherit",
     shell: false,
   });
@@ -71,6 +113,8 @@ if (process.argv[2] === "start") {
     process.argv[commandIndex],
     process.argv.slice(commandIndex + 1),
   );
+} else if (process.argv[2] === "run") {
+  process.exitCode = await run();
 } else {
   process.exitCode = await runPasswordManager(
     process.argv[2],

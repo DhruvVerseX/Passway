@@ -26,6 +26,13 @@ export function printMissingApp() {
   line('{ "appId": "your-app-id" }');
 }
 
+export function printMissingCommand() {
+  line("Passway\n");
+  line("✗ No development command found.\n");
+  line("Run setup with your app command:");
+  line("passway start -- npm run dev");
+}
+
 export function printConnectionFailure(
   result: Exclude<StatusResult, { kind: "success" }>,
 ) {
@@ -78,6 +85,12 @@ export function printSecretFailure(
 }
 
 export function printSuccess(status: RuntimeStatus) {
+  printRuntimeStatus(status);
+  line(`\n${dim("Dashboard")}`);
+  line(cyan(status.healthUrl));
+}
+
+function printRuntimeStatus(status: RuntimeStatus) {
   const runtime =
     status.app.runtimeStatus === "hosted" ? "HOSTED" : "READY TO HOST";
   line(bold("Passway"));
@@ -100,6 +113,19 @@ export function printSuccess(status: RuntimeStatus) {
       72,
     ),
   );
+}
+
+export function printSetupSuccess(status: RuntimeStatus, launchCommand: string[]) {
+  printRuntimeStatus(status);
+  line(`\n${green("✓")} Saved ${launchCommand.join(" ")} for passway run`);
+  line(`\n${dim("Next")}`);
+  line("passway run");
   line(`\n${dim("Dashboard")}`);
   line(cyan(status.healthUrl));
+}
+
+export function printRunReady(status: RuntimeStatus, launchCommand: string[]) {
+  line(bold("Passway"));
+  line(`${green("✓")} Loaded ${status.secretCount} secrets for ${status.app.name}`);
+  line(`${dim("Starting")} ${launchCommand.join(" ")}`);
 }

@@ -20,7 +20,7 @@ import {
 
 const commands = [
   "init", "unlock", "lock", "add", "list", "search <query>", "show <id>", "edit <id>",
-  "delete <id>", "generate", "audit", "import <file>", "export", "config", "start",
+  "delete <id>", "generate", "audit", "import <file>", "export", "config", "start", "run",
 ];
 
 function fail(message: string) {
