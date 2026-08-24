@@ -26,7 +26,6 @@ bun run dev:dashboard  # http://localhost:3001
 
 Build frontends with `bun run build:frontends`.
 
-
 ## Env File Ownership
 
 - `apps/api/.env` - backend-only secrets: database, Better Auth, OAuth secrets, Resend, admin key, KMS key.
@@ -35,6 +34,7 @@ Build frontends with `bun run build:frontends`.
 - root `.env` - optional convenience values when running the whole workspace locally.
 
 Backend logic, auth configuration, database schema, migrations, and email delivery belong in `apps/api`. Dashboard and web should call the API instead of owning backend state.
+
 ## Dashboard Authentication Setup
 
 Passway dashboard auth uses Better Auth 1.6, Neon PostgreSQL, Google OAuth, GitHub OAuth, email/password sign-in, email verification, password reset, and Resend transactional email.
@@ -86,3 +86,25 @@ On hosting, configure API secrets only on the API service. Dashboard/web should 
 - Request a password reset and complete it from the emailed link.
 - Configure Google and GitHub credentials in the API env, then test each OAuth button from dashboard.
 - Confirm production OAuth callbacks use `https://api.passway.co.in/api/auth/callback/google` and `https://api.passway.co.in/api/auth/callback/github`.
+
+## Secure Runtime Secret Injection
+
+A hosted environment can provide secrets to a local application without the dashboard ever requesting the plaintext bundle. Keep the one-time runtime token in the developer machine's local `.env` as `PASSWAY_TOKEN`, then launch the application through the CLI:
+
+```bash
+passway start -- npm run dev
+passway start -- bun run dev
+passway start -- node server.js
+```
+
+The CLI authenticates directly to the Passway runtime API over HTTPS, receives the authorized bundle in CLI memory, removes `PASSWAY_TOKEN` from the child process environment, and starts the requested command with the vault keys merged into `process.env`. The application can then read values normally:
+
+```ts
+const databaseUrl = process.env.DB_URL;
+const stripeKey = process.env.STRIPE_KEY;
+const jwtSecret = process.env.JWT_SECRET;
+```
+
+The runtime bundle is not fetched by the dashboard or browser. The API response is marked `no-store`, the CLI does not print secret values, and the child process receives only the application secrets—not the Passway bearer token. Anyone who obtains the bearer token could still call the runtime endpoint, so protect the local `.env`, rotate compromised tokens immediately, and never commit `PASSWAY_TOKEN` or secret values.
+
+For a connection check without launching an application, run `passway start` without a command. For a local workspace, the API defaults to `http://localhost:4000`; for an installed CLI outside the workspace, it defaults to the production API unless `PASSWAY_API_URL` is set.

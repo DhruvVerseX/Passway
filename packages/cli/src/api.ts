@@ -1,7 +1,12 @@
 export interface RuntimeStatus {
   connected: true;
   environment: { id: string; name: string; status: "hosted" };
-  app: { id: string; name: string; runtimeStatus: "draft" | "hosted"; lastConnectedAt: string };
+  app: {
+    id: string;
+    name: string;
+    runtimeStatus: "draft" | "hosted";
+    lastConnectedAt: string;
+  };
   secretCount: number;
   delivery: "verified";
   health: "healthy";
@@ -10,12 +15,47 @@ export interface RuntimeStatus {
 
 export type StatusResult =
   | { kind: "success"; status: RuntimeStatus }
-  | { kind: "auth" | "not_hosted" | "app_disabled" | "unhealthy" | "rate_limit" | "server" | "network" | "timeout" };
+  | {
+      kind:
+        | "auth"
+        | "not_hosted"
+        | "app_disabled"
+        | "unhealthy"
+        | "rate_limit"
+        | "server"
+        | "network"
+        | "timeout";
+    };
+
+export type RuntimeSecrets = Record<string, string>;
+
+type SecretsResult =
+  | { kind: "success"; secrets: RuntimeSecrets }
+  | {
+      kind:
+        | "auth"
+        | "not_hosted"
+        | "app_disabled"
+        | "unhealthy"
+        | "rate_limit"
+        | "server"
+        | "network"
+        | "timeout";
+    };
+
+function isRuntimeSecrets(value: unknown): value is RuntimeSecrets {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.entries(value).every(
+    ([key, secret]) =>
+      /^[A-Za-z_][A-Za-z0-9_]*$/.test(key) && typeof secret === "string",
+  );
+}
 
 function isRuntimeStatus(value: unknown): value is RuntimeStatus {
   if (!value || typeof value !== "object") return false;
   const response = value as Record<string, unknown>;
-  const environment = response.environment as Record<string, unknown> | undefined;
+  const environment = response.environment as
+    Record<string, unknown> | undefined;
   const app = response.app as Record<string, unknown> | undefined;
   return (
     response.connected === true &&
@@ -33,7 +73,46 @@ function isRuntimeStatus(value: unknown): value is RuntimeStatus {
   );
 }
 
-export async function fetchRuntimeStatus(apiBaseUrl: string, token: string, appId: string): Promise<StatusResult> {
+export async function fetchRuntimeSecrets(
+  apiBaseUrl: string,
+  token: string,
+  appId: string,
+): Promise<SecretsResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/runtime/secrets`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+        "x-passway-app-id": appId,
+      },
+      signal: controller.signal,
+    });
+    if (response.status === 401 || response.status === 403)
+      return { kind: "auth" };
+    if (response.status === 409) return { kind: "not_hosted" };
+    if (response.status === 423) return { kind: "app_disabled" };
+    if (response.status === 422) return { kind: "unhealthy" };
+    if (response.status === 429) return { kind: "rate_limit" };
+    if (!response.ok) return { kind: "server" };
+    const body: unknown = await response.json();
+    return isRuntimeSecrets(body)
+      ? { kind: "success", secrets: body }
+      : { kind: "server" };
+  } catch (error) {
+    return error instanceof DOMException && error.name === "AbortError"
+      ? { kind: "timeout" }
+      : { kind: "network" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function fetchRuntimeStatus(
+  apiBaseUrl: string,
+  token: string,
+  appId: string,
+): Promise<StatusResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -41,14 +120,17 @@ export async function fetchRuntimeStatus(apiBaseUrl: string, token: string, appI
       headers: { authorization: `Bearer ${token}`, "x-passway-app-id": appId },
       signal: controller.signal,
     });
-    if (response.status === 401 || response.status === 403) return { kind: "auth" };
+    if (response.status === 401 || response.status === 403)
+      return { kind: "auth" };
     if (response.status === 409) return { kind: "not_hosted" };
     if (response.status === 423) return { kind: "app_disabled" };
     if (response.status === 422) return { kind: "unhealthy" };
     if (response.status === 429) return { kind: "rate_limit" };
     if (!response.ok) return { kind: "server" };
     const body: unknown = await response.json();
-    return isRuntimeStatus(body) ? { kind: "success", status: body } : { kind: "server" };
+    return isRuntimeStatus(body)
+      ? { kind: "success", status: body }
+      : { kind: "server" };
   } catch (error) {
     return error instanceof DOMException && error.name === "AbortError"
       ? { kind: "timeout" }

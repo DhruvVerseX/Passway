@@ -2,8 +2,14 @@ import { Router } from "express";
 import { requireRuntimeToken } from "../middleware/runtime-auth.js";
 import { writeAudit } from "../services/audit.service.js";
 import { recordAppHealth } from "../services/app-runtime.service.js";
-import { getRuntimeSecretBundle, verifyRuntimeSecretBundle } from "../services/runtime-secret.service.js";
-import { authenticateRuntimeToken, touchRuntimeToken } from "../services/runtime-token.service.js";
+import {
+  getRuntimeSecretBundle,
+  verifyRuntimeSecretBundle,
+} from "../services/runtime-secret.service.js";
+import {
+  authenticateRuntimeToken,
+  touchRuntimeToken,
+} from "../services/runtime-token.service.js";
 
 export const runtimeRouter = Router();
 
@@ -27,6 +33,11 @@ runtimeRouter.get("/runtime/secrets", requireRuntimeToken, async (req, res) => {
     }
 
     const secrets = await getRuntimeSecretBundle(appId);
+    res.set({
+      "Cache-Control": "no-store, no-cache, must-revalidate, private",
+      Pragma: "no-cache",
+      "X-Content-Type-Options": "nosniff",
+    });
     touchRuntimeToken(token.id);
     await Promise.all([
       writeAudit({
@@ -72,11 +83,15 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
       secretCount = await verifyRuntimeSecretBundle(appId);
       if (secretCount === 0) {
         await recordAppHealth(appId, false);
-        return res.status(422).json({ error: "Secret health verification failed" });
+        return res
+          .status(422)
+          .json({ error: "Secret health verification failed" });
       }
     } catch {
       await recordAppHealth(appId, false);
-      return res.status(422).json({ error: "Secret health verification failed" });
+      return res
+        .status(422)
+        .json({ error: "Secret health verification failed" });
     }
     const connectedAt = new Date();
     await recordAppHealth(appId, true, connectedAt);
@@ -89,7 +104,9 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
       ip: req.ip ?? "unknown",
       action: "APP_CONNECTION_VERIFIED",
     });
-    const dashboardBase = (process.env.PASSWAY_DASHBOARD_URL ?? "https://app.passway.co.in").replace(/\/$/, "");
+    const dashboardBase = (
+      process.env.PASSWAY_DASHBOARD_URL ?? "https://app.passway.co.in"
+    ).replace(/\/$/, "");
     return res.json({
       connected: true,
       environment: {

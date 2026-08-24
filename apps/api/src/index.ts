@@ -12,7 +12,8 @@ const allowedOrigins = getAllowedOrigins();
 
 app.use((req, res, next) => {
   const origin = req.header("origin");
-  if (origin && allowedOrigins.has(origin)) {
+  const isRuntimeRequest = req.path.startsWith("/v1/runtime/");
+  if (!isRuntimeRequest && origin && allowedOrigins.has(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Vary", "Origin");
     res.header("Access-Control-Allow-Credentials", "true");
@@ -21,7 +22,10 @@ app.use((req, res, next) => {
       req.header("access-control-request-headers") ??
         "Content-Type, Authorization",
     );
-    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    );
   }
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();

@@ -26,7 +26,9 @@ export function printMissingApp() {
   line('{ "appId": "your-app-id" }');
 }
 
-export function printConnectionFailure(result: Exclude<StatusResult, { kind: "success" }>) {
+export function printConnectionFailure(
+  result: Exclude<StatusResult, { kind: "success" }>,
+) {
   line("Passway\n");
   if (result.kind === "auth") {
     line("✗ Unable to connect to Passway.\n");
@@ -49,8 +51,35 @@ export function printConnectionFailure(result: Exclude<StatusResult, { kind: "su
   }
 }
 
+export function printSecretFailure(
+  result: Exclude<StatusResult, { kind: "success" }>,
+) {
+  line("Passway\n");
+  if (result.kind === "auth") {
+    line("✗ Vault authorization failed.");
+    line("Your Passway token is invalid, expired, or revoked.");
+  } else if (result.kind === "not_hosted") {
+    line("✗ Environment is not hosted.");
+    line("Host the environment in Passway before starting your app.");
+  } else if (result.kind === "app_disabled") {
+    line("✗ Vault runtime is disabled.");
+    line("Enable Host Vault in the Passway dashboard.");
+  } else if (result.kind === "unhealthy") {
+    line("✗ Secret health verification failed.");
+    line("Your secrets were not exposed.");
+  } else if (result.kind === "rate_limit") {
+    line("✗ Passway is rate limiting this vault request. Try again shortly.");
+  } else if (result.kind === "timeout") {
+    line("✗ The vault did not respond in time. Try again.");
+  } else {
+    line("✗ Passway could not securely load the vault.");
+    line("Check your connection and try again.");
+  }
+}
+
 export function printSuccess(status: RuntimeStatus) {
-  const runtime = status.app.runtimeStatus === "hosted" ? "HOSTED" : "READY TO HOST";
+  const runtime =
+    status.app.runtimeStatus === "hosted" ? "HOSTED" : "READY TO HOST";
   line(bold("Passway"));
   line(dim("Secure runtime connection\n"));
   line(`${green("✓")} Passway token found`);
@@ -58,13 +87,19 @@ export function printSuccess(status: RuntimeStatus) {
   line(`${green("✓")} ${status.app.name} Vault linked`);
   line(`${green("✓")} ${status.secretCount} secrets available`);
   line(`${green("✓")} Secret delivery verified\n`);
-  line(frame("Runtime connection", [
-    `Vault        ${status.app.name}`,
-    `Environment  ${status.environment.name}`,
-    `State        ${green("HEALTHY")}`,
-    `Secrets      ${status.secretCount}`,
-    `Runtime      ${green(runtime)}`,
-  ], 72));
+  line(
+    frame(
+      "Runtime connection",
+      [
+        `Vault        ${status.app.name}`,
+        `Environment  ${status.environment.name}`,
+        `State        ${green("HEALTHY")}`,
+        `Secrets      ${status.secretCount}`,
+        `Runtime      ${green(runtime)}`,
+      ],
+      72,
+    ),
+  );
   line(`\n${dim("Dashboard")}`);
   line(cyan(status.healthUrl));
 }
