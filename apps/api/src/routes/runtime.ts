@@ -74,7 +74,7 @@ runtimeRouter.get("/runtime/status", requireRuntimeToken, async (req, res) => {
     if (!appId || appId !== token.environmentId) {
       return res.status(403).json({ error: "Unauthorized" });
     }
-    if (!token.runtimeEnabled && token.runtimeDisabledAt) {
+    if (!token.runtimeEnabled) {
       return res.status(423).json({ error: "Vault runtime is disabled" });
     }
 
