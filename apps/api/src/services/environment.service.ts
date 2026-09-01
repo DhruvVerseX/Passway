@@ -1,9 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
+  accessToken,
   auditLog,
   environment,
   project,
+  secret,
   workspace,
 } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
@@ -53,10 +55,15 @@ export function parseEnvironmentInput(input: unknown): EnvironmentInput {
   return parsed.data;
 }
 
-export function environmentMetadata(record: typeof environment.$inferSelect) {
+export function environmentMetadata(
+  record: typeof environment.$inferSelect,
+  counts: { secretCount?: number; tokenCount?: number } = {},
+) {
   return {
     id: record.id,
     projectId: record.projectId,
+    secretCount: counts.secretCount ?? 0,
+    tokenCount: counts.tokenCount ?? 0,
     name: record.name,
     type: record.type,
     description: record.description,
@@ -146,7 +153,35 @@ export async function listEnvironments(projectId: string, userId: string) {
     .select()
     .from(environment)
     .where(eq(environment.projectId, projectId));
-  return records.map(environmentMetadata);
+  if (!records.length) return [];
+
+  const environmentIds = records.map((record) => record.id);
+  const [secretCounts, tokenCounts] = await Promise.all([
+    db
+      .select({ environmentId: secret.environmentId, count: count() })
+      .from(secret)
+      .where(inArray(secret.environmentId, environmentIds))
+      .groupBy(secret.environmentId),
+    db
+      .select({ environmentId: accessToken.environmentId, count: count() })
+      .from(accessToken)
+      .where(inArray(accessToken.environmentId, environmentIds))
+      .groupBy(accessToken.environmentId),
+  ]);
+
+  const secretsByEnvironment = new Map(
+    secretCounts.map((item) => [item.environmentId, Number(item.count)]),
+  );
+  const tokensByEnvironment = new Map(
+    tokenCounts.map((item) => [item.environmentId, Number(item.count)]),
+  );
+
+  return records.map((record) =>
+    environmentMetadata(record, {
+      secretCount: secretsByEnvironment.get(record.id) ?? 0,
+      tokenCount: tokensByEnvironment.get(record.id) ?? 0,
+    }),
+  );
 }
 
 export async function deleteEnvironment(environmentId: string, userId: string) {

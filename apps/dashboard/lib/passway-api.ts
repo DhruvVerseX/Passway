@@ -10,6 +10,8 @@ export type ApiProject = {
 export type ApiEnvironment = {
   id: string;
   projectId: string;
+  secretCount: number;
+  tokenCount: number;
   name: string;
   type: "development" | "preview" | "staging" | "production" | "custom";
   description: string | null;

@@ -49,8 +49,8 @@ function fromApiEnvironment(item: ApiEnvironment): Environment {
         : ((item.type.charAt(0).toUpperCase() +
             item.type.slice(1)) as EnvironmentType),
     description: item.description ?? "No description added.",
-    secrets: 0,
-    tokens: 0,
+    secrets: item.secretCount ?? 0,
+    tokens: item.tokenCount ?? 0,
     status: item.status === "disabled" ? "Needs attention" : "Healthy",
     apiStatus: item.status,
     updated: new Date(item.updatedAt).toLocaleDateString(),
