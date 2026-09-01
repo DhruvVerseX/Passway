@@ -4,6 +4,9 @@ const mocks = vi.hoisted(() => ({
   getOwnedEnvironment: vi.fn(),
   verifyRuntimeSecretBundle: vi.fn(),
   transaction: vi.fn(),
+  select: vi.fn(),
+  from: vi.fn(),
+  selectWhere: vi.fn(),
   update: vi.fn(),
   set: vi.fn(),
   where: vi.fn(),
@@ -16,7 +19,7 @@ vi.mock("../../db/index.js", () => ({ db: { transaction: mocks.transaction, upda
 vi.mock("../environment-access.js", () => ({ getOwnedEnvironment: mocks.getOwnedEnvironment }));
 vi.mock("../runtime-secret.service.js", () => ({ verifyRuntimeSecretBundle: mocks.verifyRuntimeSecretBundle }));
 
-import { AppRuntimeError, hostAppRuntime } from "../app-runtime.service.js";
+import { AppRuntimeError, disableAppRuntime, hostAppRuntime } from "../app-runtime.service.js";
 
 const owned = {
   environmentId: "app-a",
@@ -36,13 +39,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.getOwnedEnvironment.mockResolvedValue(owned);
   mocks.verifyRuntimeSecretBundle.mockResolvedValue(2);
+  mocks.selectWhere.mockResolvedValue([{ id: "token-a" }]);
+  mocks.from.mockReturnValue({ where: mocks.selectWhere });
+  mocks.select.mockReturnValue({ from: mocks.from });
   mocks.returning.mockResolvedValue([{ id: "app-a", name: "Backend", hostedAt: new Date("2026-08-23T12:00:00Z") }]);
   mocks.where.mockReturnValue({ returning: mocks.returning });
   mocks.set.mockReturnValue({ where: mocks.where });
   mocks.update.mockReturnValue({ set: mocks.set });
   mocks.values.mockResolvedValue(undefined);
   mocks.insert.mockReturnValue({ values: mocks.values });
-  mocks.transaction.mockImplementation(async (run) => run({ update: mocks.update, insert: mocks.insert }));
+  mocks.transaction.mockImplementation(async (run) => run({ select: mocks.select, update: mocks.update, insert: mocks.insert }));
 });
 
 describe("App runtime hosting", () => {
@@ -71,5 +77,17 @@ describe("App runtime hosting", () => {
     mocks.verifyRuntimeSecretBundle.mockResolvedValueOnce(0).mockRejectedValueOnce(new Error("corrupt"));
     await expect(hostAppRuntime("app-a", "owner-a", "127.0.0.1")).rejects.toEqual(new AppRuntimeError("INVALID_CONFIG"));
     await expect(hostAppRuntime("app-a", "owner-a", "127.0.0.1")).rejects.toEqual(new AppRuntimeError("INVALID_CONFIG"));
+  });
+
+  it("revokes active runtime tokens when disabling the App", async () => {
+    mocks.getOwnedEnvironment.mockResolvedValue({ ...owned, runtimeEnabled: true });
+    mocks.returning.mockResolvedValueOnce([{ id: "app-a", name: "Backend", disabledAt: new Date("2026-08-23T12:00:00Z") }]);
+
+    await expect(disableAppRuntime("app-a", "owner-a", "127.0.0.1")).resolves.toMatchObject({ runtimeStatus: "disabled" });
+    expect(mocks.set.mock.calls.some(([value]) => value.status === "revoked" && value.revoked === true)).toBe(true);
+    expect(mocks.values.mock.calls[0][0].map((entry: { action: string }) => entry.action)).toEqual([
+      "APP_RUNTIME_DISABLED",
+      "RUNTIME_TOKEN_REVOKED",
+    ]);
   });
 });

@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { auditLog, environment } from "../db/auth-schema.js";
+import { accessToken, auditLog, environment } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { auditValues } from "./audit.service.js";
 import { getOwnedEnvironment } from "./environment-access.js";
@@ -54,20 +54,43 @@ export async function disableAppRuntime(appId: string, userId: string, ip: strin
 
   const now = new Date();
   const record = await db.transaction(async (tx) => {
+    const activeTokens = await tx
+      .select({ id: accessToken.id })
+      .from(accessToken)
+      .where(and(eq(accessToken.environmentId, appId), eq(accessToken.status, "active")));
     const [disabled] = await tx
       .update(environment)
       .set({ runtimeEnabled: false, runtimeDisabledAt: now, updatedAt: now })
       .where(and(eq(environment.id, appId), eq(environment.runtimeEnabled, true)))
       .returning({ id: environment.id, name: environment.name, disabledAt: environment.runtimeDisabledAt });
     if (!disabled) return undefined;
-    await tx.insert(auditLog).values(auditValues({
-      environmentId: appId,
-      projectId: owned.projectId,
-      workspaceId: owned.workspaceId,
-      actorUserId: userId,
-      ip,
-      action: "APP_RUNTIME_DISABLED",
-    }));
+    if (activeTokens.length) {
+      await tx
+        .update(accessToken)
+        .set({ status: "revoked", revoked: true, revokedAt: now })
+        .where(and(eq(accessToken.environmentId, appId), eq(accessToken.status, "active")));
+    }
+    await tx.insert(auditLog).values([
+      auditValues({
+        environmentId: appId,
+        projectId: owned.projectId,
+        workspaceId: owned.workspaceId,
+        actorUserId: userId,
+        ip,
+        action: "APP_RUNTIME_DISABLED",
+      }),
+      ...activeTokens.map((token) =>
+        auditValues({
+          environmentId: appId,
+          projectId: owned.projectId,
+          workspaceId: owned.workspaceId,
+          actorUserId: userId,
+          accessTokenId: token.id,
+          ip,
+          action: "RUNTIME_TOKEN_REVOKED",
+        }),
+      ),
+    ]);
     return disabled;
   });
   return record && { id: record.id, name: record.name, runtimeStatus: "disabled" as const, disabledAt: record.disabledAt };
