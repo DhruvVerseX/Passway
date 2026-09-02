@@ -16,11 +16,13 @@ import {
   printMissingApp,
   printMissingCommand,
   printMissingToken,
+  printRuntimeProcessError,
   printRunReady,
   printSecretFailure,
   printSetupSuccess,
 } from "./output.js";
 import { runPasswordManager } from "./password-manager.js";
+import { secretValues } from "./redact.js";
 import { childEnvironment, executableForPlatform } from "./runtime.js";
 
 async function verifyRuntime(appId: string, token: string) {
@@ -94,15 +96,27 @@ async function run() {
 
   printRunReady(runtime.status, config.launchCommand);
   const [command, ...args] = config.launchCommand;
+  let secrets: typeof runtime.secrets | undefined = runtime.secrets;
+  const redactions = secretValues(secrets);
+  const childEnv = childEnvironment(process.env, secrets);
+  runtime.secrets = {};
+  secrets = undefined;
   const child = spawn(executableForPlatform(command), args, {
     cwd: process.cwd(),
-    env: childEnvironment(process.env, runtime.secrets),
+    env: childEnv,
     stdio: "inherit",
     shell: false,
   });
 
   return await new Promise<number>((resolve) => {
-    child.once("error", () => resolve(1));
+    child.once("spawn", () => {
+      redactions.length = 0;
+    });
+    child.once("error", (error) => {
+      printRuntimeProcessError(error, redactions);
+      redactions.length = 0;
+      resolve(1);
+    });
     child.once("exit", (code) => resolve(code ?? 1));
   });
 }

@@ -1,4 +1,5 @@
 import type { RuntimeStatus, StatusResult } from "./api.js";
+import { redactKnownSecrets } from "./redact.js";
 import { bold, cyan, dim, frame, green } from "./terminal.js";
 
 function line(value = "") {
@@ -128,4 +129,8 @@ export function printRunReady(status: RuntimeStatus, launchCommand: string[]) {
   line(bold("Passway"));
   line(`${green("✓")} Loaded ${status.secretCount} secrets for ${status.app.name}`);
   line(`${dim("Starting")} ${launchCommand.join(" ")}`);
+}
+
+export function printRuntimeProcessError(error: unknown, secrets: readonly string[]) {
+  process.stderr.write(`${redactKnownSecrets(error, secrets)}\n`);
 }

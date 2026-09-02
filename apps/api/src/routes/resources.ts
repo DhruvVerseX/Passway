@@ -4,6 +4,7 @@ import { z } from "zod";
 import { project, workspace } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { redactKnownSecrets } from "../redact.js";
 import {
   createEnvironment,
   EnvironmentInputError,
@@ -93,7 +94,7 @@ resourcesRouter.post("/bootstrap", requireAuth, async (req, res) => {
           "Passway database migration is required. Run `bun run --cwd apps/api db:migrate` and restart the API.",
       });
     }
-    console.error("Passway bootstrap failed", error);
+    console.error("Passway bootstrap failed", redactKnownSecrets(error));
     return res
       .status(500)
       .json({ error: "Unable to initialize the Passway workspace." });

@@ -19,6 +19,8 @@ function requestedAppId(req: Parameters<typeof requireRuntimeToken>[0]) {
 }
 
 runtimeRouter.get("/runtime/secrets", requireRuntimeToken, async (req, res) => {
+  // Plaintext secrets leave this endpoint, so any body logger must skip it.
+  res.locals.passwayDisableBodyLogging = true;
   try {
     const token = await authenticateRuntimeToken(req.runtimeToken!);
     if (!token || token.environmentStatus !== "hosted") {
