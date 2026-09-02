@@ -1,10 +1,11 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, gt, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   accessToken,
   auditLog,
   environment,
   project,
+  runtimeSession,
   secret,
   workspace,
 } from "../db/auth-schema.js";
@@ -57,13 +58,18 @@ export function parseEnvironmentInput(input: unknown): EnvironmentInput {
 
 export function environmentMetadata(
   record: typeof environment.$inferSelect,
-  counts: { secretCount?: number; tokenCount?: number } = {},
+  counts: { secretCount?: number; tokenCount?: number; activeRuntimeSessions?: number } = {},
 ) {
+  const activeRuntimeSessions = counts.activeRuntimeSessions ?? 0;
   return {
     id: record.id,
     projectId: record.projectId,
     secretCount: counts.secretCount ?? 0,
     tokenCount: counts.tokenCount ?? 0,
+    activeRuntimeSessions,
+    revocationLevel: activeRuntimeSessions > 0
+      ? "Static - live revoke enabled"
+      : "Static - no active live session",
     name: record.name,
     type: record.type,
     description: record.description,
@@ -156,7 +162,8 @@ export async function listEnvironments(projectId: string, userId: string) {
   if (!records.length) return [];
 
   const environmentIds = records.map((record) => record.id);
-  const [secretCounts, tokenCounts] = await Promise.all([
+  const heartbeatCutoff = new Date(Date.now() - 45_000);
+  const [secretCounts, tokenCounts, sessionCounts] = await Promise.all([
     db
       .select({ environmentId: secret.environmentId, count: count() })
       .from(secret)
@@ -167,6 +174,15 @@ export async function listEnvironments(projectId: string, userId: string) {
       .from(accessToken)
       .where(inArray(accessToken.environmentId, environmentIds))
       .groupBy(accessToken.environmentId),
+    db
+      .select({ environmentId: runtimeSession.environmentId, count: count() })
+      .from(runtimeSession)
+      .where(and(
+        inArray(runtimeSession.environmentId, environmentIds),
+        eq(runtimeSession.status, "active"),
+        gt(runtimeSession.lastHeartbeatAt, heartbeatCutoff),
+      ))
+      .groupBy(runtimeSession.environmentId),
   ]);
 
   const secretsByEnvironment = new Map(
@@ -175,11 +191,15 @@ export async function listEnvironments(projectId: string, userId: string) {
   const tokensByEnvironment = new Map(
     tokenCounts.map((item) => [item.environmentId, Number(item.count)]),
   );
+  const sessionsByEnvironment = new Map(
+    sessionCounts.map((item) => [item.environmentId, Number(item.count)]),
+  );
 
   return records.map((record) =>
     environmentMetadata(record, {
       secretCount: secretsByEnvironment.get(record.id) ?? 0,
       tokenCount: tokensByEnvironment.get(record.id) ?? 0,
+      activeRuntimeSessions: sessionsByEnvironment.get(record.id) ?? 0,
     }),
   );
 }

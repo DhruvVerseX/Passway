@@ -1,4 +1,5 @@
 ﻿import express from "express";
+import { createServer } from "node:http";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth/auth.js";
 import { getAllowedOrigins } from "./env.js";
@@ -6,13 +7,14 @@ import { secretsRouter } from "./routes/secrets.js";
 import { environmentsRouter } from "./routes/environments.js";
 import { resourcesRouter } from "./routes/resources.js";
 import { runtimeRouter } from "./routes/runtime.js";
+import { attachRuntimeSessionWebSocket } from "./runtime-websocket.js";
 
 const app = express();
 const allowedOrigins = getAllowedOrigins();
 
 app.use((req, res, next) => {
   const origin = req.header("origin");
-  const isRuntimeRequest = req.path.startsWith("/v1/runtime/");
+  const isRuntimeRequest = req.path.startsWith("/v1/runtime/") || req.path.startsWith("/api/runtime/");
   if (!isRuntimeRequest && origin && allowedOrigins.has(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Vary", "Origin");
@@ -43,8 +45,11 @@ app.use("/v1", secretsRouter);
 app.use("/v1", environmentsRouter);
 app.use("/v1", resourcesRouter);
 app.use("/v1", runtimeRouter);
+app.use("/api", runtimeRouter);
 
 const port = Number(process.env.PORT ?? 4000);
-app.listen(port, () => {
+const server = createServer(app);
+attachRuntimeSessionWebSocket(server);
+server.listen(port, () => {
   console.log(`passway-api listening on http://localhost:${port}`);
 });

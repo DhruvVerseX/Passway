@@ -50,6 +50,13 @@
       "when": 1787496544051,
       "tag": "0006_slim_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788334174158,
+      "tag": "0007_runtime_sessions",
+      "breakpoints": true
     }
   ]
 }

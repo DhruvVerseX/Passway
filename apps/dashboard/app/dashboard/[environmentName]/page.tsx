@@ -68,6 +68,8 @@ type StoredEnvironment = {
   lastConnectedAt?: string | null;
   lastHealthCheckAt?: string | null;
   lastHealthHealthy?: boolean | null;
+  activeRuntimeSessions?: number;
+  revocationLevel?: string;
 };
 
 const typeTone: Record<EnvironmentType, string> = {
@@ -356,6 +358,8 @@ export default function EnvironmentDashboard() {
           lastConnectedAt: matched.lastConnectedAt,
           lastHealthCheckAt: matched.lastHealthCheckAt,
           lastHealthHealthy: matched.lastHealthHealthy,
+          activeRuntimeSessions: matched.activeRuntimeSessions,
+          revocationLevel: matched.revocationLevel,
         });
         const result = await listSecrets(matched.id);
         const secretsLocked = matched.status === "locked" || matched.status === "hosted";
@@ -614,6 +618,10 @@ export default function EnvironmentDashboard() {
       : currentEnvironment.runtimeEnabled && currentEnvironment.lastHealthHealthy
         ? "Healthy"
         : "Waiting for connection";
+  const revocationLevel = currentEnvironment.runtimeEnabled
+    ? currentEnvironment.revocationLevel ?? "Static - no active live session"
+    : "Static - runtime disabled";
+  const activeRuntimeSessions = currentEnvironment.activeRuntimeSessions ?? 0;
 
   return (
     <ControlPlaneShell active="Vaults" title={displayName}>
@@ -775,12 +783,18 @@ export default function EnvironmentDashboard() {
                   <p className={`mt-3 text-xl font-semibold ${runtimeStatus === "Hosted" ? "text-[#b9f55d]" : "text-white"}`}>
                     {runtimeStatus}
                   </p>
+                  <p className="mt-2 text-[11px] text-white/35">
+                    {revocationLevel}
+                  </p>
+                  <p className="mt-1 text-[11px] text-white/25">
+                    {activeRuntimeSessions} active session{activeRuntimeSessions === 1 ? "" : "s"}
+                  </p>
                 </div>
                 <span className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/50">
                   <KeyRound size={16} />
                 </span>
               </div>
-              <button onClick={() => void copyAppConfig()} className="mt-4 inline-flex items-center gap-1.5 text-[11px] text-white/35 transition hover:text-white/70" title="Copy .passway.json configuration" aria-label="Copy .passway.json configuration">
+              <button onClick={() => void copyAppConfig()} className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-white/35 transition hover:text-white/70" title="Copy .passway.json configuration" aria-label="Copy .passway.json configuration">
                 <Clipboard size={12} /> Copy vault config
               </button>
             </article>

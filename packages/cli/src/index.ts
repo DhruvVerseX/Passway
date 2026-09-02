@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { spawn } from "node:child_process";
-import { fetchRuntimeSecrets, fetchRuntimeStatus } from "./api.js";
+import { spawn, type ChildProcess } from "node:child_process";
+import { createRuntimeSession, fetchRuntimeSecrets, fetchRuntimeStatus } from "./api.js";
 import {
   apiBaseUrl,
   detectLaunchCommand,
@@ -16,6 +16,8 @@ import {
   printMissingApp,
   printMissingCommand,
   printMissingToken,
+  printRuntimeRevoked,
+  printRuntimeWarning,
   printRuntimeProcessError,
   printRunReady,
   printSecretFailure,
@@ -24,6 +26,7 @@ import {
 import { runPasswordManager } from "./password-manager.js";
 import { secretValues } from "./redact.js";
 import { childEnvironment, executableForPlatform } from "./runtime.js";
+import { connectRuntimeSessionSocket } from "./runtime-session.js";
 
 async function verifyRuntime(appId: string, token: string) {
   const baseUrl = apiBaseUrl();
@@ -91,17 +94,45 @@ async function run() {
     return 1;
   }
 
-  const runtime = await verifyRuntime(config.appId, token);
-  if (!runtime) return 1;
+  const baseUrl = apiBaseUrl();
+  const status = await fetchRuntimeStatus(baseUrl, token, config.appId);
+  if (status.kind !== "success") {
+    printConnectionFailure(status);
+    return 1;
+  }
+  const session = await createRuntimeSession(baseUrl, token, config.appId);
+  if (session.kind !== "success") {
+    printSecretFailure(session);
+    return 1;
+  }
 
-  printRunReady(runtime.status, config.launchCommand);
+  printRunReady(status.status, config.launchCommand);
   const [command, ...args] = config.launchCommand;
-  let secrets: typeof runtime.secrets | undefined = runtime.secrets;
+  let child: ChildProcess | undefined;
+  let revoked = false;
+  let secrets: typeof session.session.secrets | undefined = session.session.secrets;
   const redactions = secretValues(secrets);
   const childEnv = childEnvironment(process.env, secrets);
-  runtime.secrets = {};
+  session.session.secrets = {};
   secrets = undefined;
-  const child = spawn(executableForPlatform(command), args, {
+  const socket = await connectRuntimeSessionSocket({
+    apiBaseUrl: baseUrl,
+    sessionId: session.session.sessionId,
+    sessionToken: session.session.sessionToken,
+    warn: printRuntimeWarning,
+    onRevoke: () => {
+      revoked = true;
+      printRuntimeRevoked();
+      child?.kill("SIGTERM");
+      setTimeout(() => child?.kill("SIGKILL"), 5_000).unref();
+    },
+  });
+  if (revoked) {
+    socket.close();
+    return 1;
+  }
+
+  child = spawn(executableForPlatform(command), args, {
     cwd: process.cwd(),
     env: childEnv,
     stdio: "inherit",
@@ -117,7 +148,10 @@ async function run() {
       redactions.length = 0;
       resolve(1);
     });
-    child.once("exit", (code) => resolve(code ?? 1));
+    child.once("exit", (code) => {
+      socket.close();
+      resolve(revoked ? 1 : (code ?? 1));
+    });
   });
 }
 

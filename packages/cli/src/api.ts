@@ -29,8 +29,28 @@ export type StatusResult =
 
 export type RuntimeSecrets = Record<string, string>;
 
+export interface RuntimeSession {
+  sessionId: string;
+  sessionToken: string;
+  secrets: RuntimeSecrets;
+}
+
 type SecretsResult =
   | { kind: "success"; secrets: RuntimeSecrets }
+  | {
+      kind:
+        | "auth"
+        | "not_hosted"
+        | "app_disabled"
+        | "unhealthy"
+        | "rate_limit"
+        | "server"
+        | "network"
+        | "timeout";
+    };
+
+type SessionResult =
+  | { kind: "success"; session: RuntimeSession }
   | {
       kind:
         | "auth"
@@ -70,6 +90,17 @@ function isRuntimeStatus(value: unknown): value is RuntimeStatus {
     response.delivery === "verified" &&
     response.health === "healthy" &&
     typeof response.healthUrl === "string"
+  );
+}
+
+function isRuntimeSession(value: unknown): value is RuntimeSession {
+  if (!value || typeof value !== "object") return false;
+  const response = value as Record<string, unknown>;
+  return (
+    typeof response.sessionId === "string" &&
+    response.sessionId.startsWith("sess_") &&
+    typeof response.sessionToken === "string" &&
+    isRuntimeSecrets(response.secrets)
   );
 }
 
@@ -130,6 +161,43 @@ export async function fetchRuntimeStatus(
     const body: unknown = await response.json();
     return isRuntimeStatus(body)
       ? { kind: "success", status: body }
+      : { kind: "server" };
+  } catch (error) {
+    return error instanceof DOMException && error.name === "AbortError"
+      ? { kind: "timeout" }
+      : { kind: "network" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function createRuntimeSession(
+  apiBaseUrl: string,
+  token: string,
+  projectId: string,
+): Promise<SessionResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/runtime/sessions`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ projectId }),
+      signal: controller.signal,
+    });
+    if (response.status === 401 || response.status === 403)
+      return { kind: "auth" };
+    if (response.status === 409) return { kind: "not_hosted" };
+    if (response.status === 423) return { kind: "app_disabled" };
+    if (response.status === 422) return { kind: "unhealthy" };
+    if (response.status === 429) return { kind: "rate_limit" };
+    if (!response.ok) return { kind: "server" };
+    const body: unknown = await response.json();
+    return isRuntimeSession(body)
+      ? { kind: "success", session: body }
       : { kind: "server" };
   } catch (error) {
     return error instanceof DOMException && error.name === "AbortError"

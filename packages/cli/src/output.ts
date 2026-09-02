@@ -134,3 +134,11 @@ export function printRunReady(status: RuntimeStatus, launchCommand: string[]) {
 export function printRuntimeProcessError(error: unknown, secrets: readonly string[]) {
   process.stderr.write(`${redactKnownSecrets(error, secrets)}\n`);
 }
+
+export function printRuntimeWarning(message: string) {
+  process.stderr.write(`Passway warning: ${message}\n`);
+}
+
+export function printRuntimeRevoked() {
+  process.stderr.write("Passway runtime session revoked; stopping child process.\n");
+}

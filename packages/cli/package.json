@@ -17,5 +17,11 @@
     "test": "vitest run",
     "build": "bun build src/index.ts --outdir dist --target node",
     "prepack": "bun run build"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }

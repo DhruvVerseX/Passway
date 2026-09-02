@@ -12,6 +12,8 @@ export type ApiEnvironment = {
   projectId: string;
   secretCount: number;
   tokenCount: number;
+  activeRuntimeSessions: number;
+  revocationLevel: string;
   name: string;
   type: "development" | "preview" | "staging" | "production" | "custom";
   description: string | null;

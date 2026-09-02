@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchRuntimeSecrets, fetchRuntimeStatus } from "../api.js";
+import { createRuntimeSession, fetchRuntimeSecrets, fetchRuntimeStatus } from "../api.js";
 
 const token = `ps_live_${"a".repeat(43)}`;
 
@@ -31,6 +31,35 @@ describe("runtime secrets API", () => {
         authorization: `Bearer ${token}`,
         "x-passway-app-id": "environment-id",
       },
+    });
+  });
+});
+
+describe("runtime sessions API", () => {
+  it("creates a scoped runtime session without logging the response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          sessionId: "sess_a",
+          sessionToken: `ps_live_${"b".repeat(43)}`,
+          secrets: { DB_URL: "postgres://private" },
+        }),
+        { status: 201 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createRuntimeSession("https://api.passway.co.in", token, "environment-id"),
+    ).resolves.toMatchObject({
+      kind: "success",
+      session: { sessionId: "sess_a", secrets: { DB_URL: "postgres://private" } },
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://api.passway.co.in/api/runtime/sessions",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+      projectId: "environment-id",
     });
   });
 });

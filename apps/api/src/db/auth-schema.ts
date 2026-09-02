@@ -113,6 +113,12 @@ export const runtimeTokenStatus = pgEnum("runtime_token_status", [
   "revoked",
 ]);
 
+export const runtimeSessionStatus = pgEnum("runtime_session_status", [
+  "active",
+  "revoked",
+  "expired",
+]);
+
 export const auditResult = pgEnum("audit_result", ["allowed", "denied"]);
 export const auditAction = pgEnum("audit_action", [
   "BUNDLE_CREATED",
@@ -128,6 +134,9 @@ export const auditAction = pgEnum("audit_action", [
   "RUNTIME_TOKEN_REVOKED",
   "RUNTIME_SECRET_BUNDLE_READ",
   "RUNTIME_CONNECTION_VERIFIED",
+  "RUNTIME_SESSION_CREATED",
+  "RUNTIME_SESSION_REVOKED",
+  "RUNTIME_SESSION_HEARTBEAT_TIMEOUT",
   "APP_RUNTIME_ENABLED",
   "APP_RUNTIME_DISABLED",
   "APP_CONNECTION_VERIFIED",
@@ -265,6 +274,38 @@ export const accessToken = pgTable(
       .defaultNow(),
   },
   (table) => [index("access_token_environment_id_idx").on(table.environmentId)],
+);
+
+export const runtimeSession = pgTable(
+  "runtime_session",
+  {
+    sessionId: text("session_id").primaryKey(),
+    environmentId: text("environment_id")
+      .notNull()
+      .references(() => environment.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    accessTokenId: text("access_token_id").references(() => accessToken.id, {
+      onDelete: "set null",
+    }),
+    sessionTokenHash: text("session_token_hash").notNull().unique(),
+    status: runtimeSessionStatus("status").notNull().default("active"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("runtime_session_environment_id_idx").on(table.environmentId),
+    index("runtime_session_project_id_idx").on(table.projectId),
+  ],
 );
 
 export const auditLog = pgTable(
