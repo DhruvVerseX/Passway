@@ -106,6 +106,19 @@ function isUniqueViolation(error: unknown) {
   );
 }
 
+function isMissingTable(error: unknown) {
+  const cause =
+    typeof error === "object" && error !== null && "cause" in error
+      ? error.cause
+      : error;
+  return (
+    typeof cause === "object" &&
+    cause !== null &&
+    "code" in cause &&
+    cause.code === "42P01"
+  );
+}
+
 export async function createEnvironment(
   projectId: string,
   userId: string,
@@ -163,7 +176,7 @@ export async function listEnvironments(projectId: string, userId: string) {
 
   const environmentIds = records.map((record) => record.id);
   const heartbeatCutoff = new Date(Date.now() - 45_000);
-  const [secretCounts, tokenCounts, sessionCounts] = await Promise.all([
+  const [secretCounts, tokenCounts] = await Promise.all([
     db
       .select({ environmentId: secret.environmentId, count: count() })
       .from(secret)
@@ -174,7 +187,10 @@ export async function listEnvironments(projectId: string, userId: string) {
       .from(accessToken)
       .where(inArray(accessToken.environmentId, environmentIds))
       .groupBy(accessToken.environmentId),
-    db
+  ]);
+  let sessionCounts: Array<{ environmentId: string; count: number }> = [];
+  try {
+    sessionCounts = await db
       .select({ environmentId: runtimeSession.environmentId, count: count() })
       .from(runtimeSession)
       .where(and(
@@ -182,8 +198,10 @@ export async function listEnvironments(projectId: string, userId: string) {
         eq(runtimeSession.status, "active"),
         gt(runtimeSession.lastHeartbeatAt, heartbeatCutoff),
       ))
-      .groupBy(runtimeSession.environmentId),
-  ]);
+      .groupBy(runtimeSession.environmentId);
+  } catch (error) {
+    if (!isMissingTable(error)) throw error;
+  }
 
   const secretsByEnvironment = new Map(
     secretCounts.map((item) => [item.environmentId, Number(item.count)]),
