@@ -3,7 +3,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import {
   authenticateRuntimeSession,
   expireHeartbeatTimeouts,
-  touchRuntimeSessionHeartbeat,
+  renewRuntimeSession,
 } from "./services/runtime-session.service.js";
 
 const sockets = new Map<string, Set<WebSocket>>();
@@ -34,9 +34,10 @@ export function attachRuntimeSessionWebSocket(server: Server) {
     const id = sessionId(req);
     if (!id) return;
 
+    const token = bearer(req) ?? "";
     let session;
     try {
-      session = await authenticateRuntimeSession(id, bearer(req) ?? "");
+      session = await authenticateRuntimeSession(id, token);
     } catch {
       socket.destroy();
       return;
@@ -56,7 +57,9 @@ export function attachRuntimeSessionWebSocket(server: Server) {
         try {
           const message = JSON.parse(data.toString()) as { type?: unknown };
           if (message.type === "heartbeat") {
-            void touchRuntimeSessionHeartbeat(id).catch(() => undefined);
+            void renewRuntimeSession(id, token).then((renewed) => {
+              if (!renewed) ws.close(4001, "inactive");
+            }).catch(() => ws.close(1011, "renewal failed"));
           }
         } catch {
           ws.close(1003, "invalid message");

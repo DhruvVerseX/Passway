@@ -1,4 +1,4 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, gt, lt } from "drizzle-orm";
 import { generateToken, hashToken, looksLikePasswayToken } from "../crypto/tokens.js";
 import { auditLog, runtimeSession, workspace } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
@@ -6,7 +6,7 @@ import { auditValues } from "./audit.service.js";
 import { getRuntimeSecretBundle } from "./runtime-secret.service.js";
 import { authenticateRuntimeToken, touchRuntimeToken } from "./runtime-token.service.js";
 
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+export const RUNTIME_SESSION_TTL_MS = 15 * 60 * 1000;
 export const HEARTBEAT_TIMEOUT_MS = 45_000;
 
 export async function createRuntimeSession(projectId: string, tokenValue: string, ip: string) {
@@ -29,7 +29,7 @@ export async function createRuntimeSession(projectId: string, tokenValue: string
       accessTokenId: token.id,
       sessionTokenHash: hashToken(sessionToken),
       status: "active",
-      expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
+      expiresAt: new Date(now.getTime() + RUNTIME_SESSION_TTL_MS),
       createdAt: now,
       lastHeartbeatAt: now,
     });
@@ -76,12 +76,24 @@ export async function authenticateRuntimeSession(sessionId: string, sessionToken
   return session;
 }
 
-export function touchRuntimeSessionHeartbeat(sessionId: string) {
-  return db
+export async function renewRuntimeSession(sessionId: string, sessionToken: string) {
+  const session = await authenticateRuntimeSession(sessionId, sessionToken);
+  if (!session) return false;
+
+  const now = new Date();
+  const [renewed] = await db
     .update(runtimeSession)
-    .set({ lastHeartbeatAt: new Date() })
-    .where(and(eq(runtimeSession.sessionId, sessionId), eq(runtimeSession.status, "active")))
-    .execute();
+    .set({
+      expiresAt: new Date(now.getTime() + RUNTIME_SESSION_TTL_MS),
+      lastHeartbeatAt: now,
+    })
+    .where(and(
+      eq(runtimeSession.sessionId, sessionId),
+      eq(runtimeSession.status, "active"),
+      gt(runtimeSession.expiresAt, now),
+    ))
+    .returning({ sessionId: runtimeSession.sessionId });
+  return Boolean(renewed);
 }
 
 export async function revokeRuntimeSession(sessionId: string, userId: string, ip: string) {
