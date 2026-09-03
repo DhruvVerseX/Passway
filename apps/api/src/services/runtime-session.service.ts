@@ -5,12 +5,23 @@ import { db } from "../db/index.js";
 import { auditValues } from "./audit.service.js";
 import { getRuntimeSecretBundle } from "./runtime-secret.service.js";
 import { authenticateRuntimeToken, touchRuntimeToken } from "./runtime-token.service.js";
+import { consumeRuntimeDeviceSessionChallenge } from "./runtime-device.service.js";
 
 export const RUNTIME_SESSION_TTL_MS = 15 * 60 * 1000;
 export const HEARTBEAT_TIMEOUT_MS = 45_000;
 
-export async function createRuntimeSession(projectId: string, tokenValue: string, ip: string) {
-  const token = await authenticateRuntimeToken(tokenValue);
+export async function createRuntimeSession(
+  projectId: string,
+  tokenValue: string,
+  ip: string,
+  deviceProof: { challengeId: string; signature: string },
+) {
+  const device = await consumeRuntimeDeviceSessionChallenge(
+    tokenValue,
+    deviceProof.challengeId,
+    deviceProof.signature,
+  );
+  const token = device?.token;
   if (!token || token.environmentStatus !== "hosted") return undefined;
   if (projectId !== token.environmentId && projectId !== token.projectId) return undefined;
   if (!token.runtimeEnabled) return undefined;
@@ -27,6 +38,7 @@ export async function createRuntimeSession(projectId: string, tokenValue: string
       projectId: token.projectId,
       workspaceId: token.workspaceId,
       accessTokenId: token.id,
+      deviceId: device.deviceId,
       sessionTokenHash: hashToken(sessionToken),
       status: "active",
       expiresAt: new Date(now.getTime() + RUNTIME_SESSION_TTL_MS),

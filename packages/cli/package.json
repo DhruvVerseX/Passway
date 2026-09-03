@@ -19,6 +19,7 @@
     "prepack": "bun run build"
   },
   "dependencies": {
+    "keytar": "^7.9.0",
     "ws": "^8.21.3"
   },
   "devDependencies": {

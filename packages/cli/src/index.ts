@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { spawn, type ChildProcess } from "node:child_process";
-import { createRuntimeSession, fetchRuntimeSecrets, fetchRuntimeStatus } from "./api.js";
+import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeSecrets, fetchRuntimeStatus, registerRuntimeDevice } from "./api.js";
 import {
   apiBaseUrl,
   detectLaunchCommand,
@@ -27,6 +27,7 @@ import { runPasswordManager } from "./password-manager.js";
 import { secretValues } from "./redact.js";
 import { childEnvironment, executableForPlatform } from "./runtime.js";
 import { connectRuntimeSessionSocket } from "./runtime-session.js";
+import { deviceLabel, getOrCreateRuntimeDeviceKey } from "./device.js";
 
 async function verifyRuntime(appId: string, token: string) {
   const baseUrl = apiBaseUrl();
@@ -68,6 +69,13 @@ async function start(command?: string, args: string[] = []) {
 
   const runtime = await verifyRuntime(appId, token);
   if (!runtime) return 1;
+  try {
+    const device = await getOrCreateRuntimeDeviceKey(baseUrl, appId);
+    await registerRuntimeDevice(baseUrl, token, device, deviceLabel());
+  } catch {
+    printConnectionFailure({ kind: "auth" });
+    return 1;
+  }
 
   await saveProjectConfig({ appId, launchCommand });
   printSetupSuccess(runtime.status, launchCommand);
@@ -100,7 +108,15 @@ async function run() {
     printConnectionFailure(status);
     return 1;
   }
-  const session = await createRuntimeSession(baseUrl, token, config.appId);
+  let proof: { challengeId: string; signature: string };
+  try {
+    const device = await getOrCreateRuntimeDeviceKey(baseUrl, config.appId);
+    proof = await createRuntimeDeviceProof(baseUrl, token, device);
+  } catch {
+    printConnectionFailure({ kind: "auth" });
+    return 1;
+  }
+  const session = await createRuntimeSession(baseUrl, token, config.appId, proof);
   if (session.kind !== "success") {
     printSecretFailure(session);
     return 1;

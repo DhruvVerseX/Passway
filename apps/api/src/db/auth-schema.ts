@@ -119,6 +119,16 @@ export const runtimeSessionStatus = pgEnum("runtime_session_status", [
   "expired",
 ]);
 
+export const runtimeDeviceStatus = pgEnum("runtime_device_status", [
+  "active",
+  "revoked",
+]);
+
+export const runtimeDeviceChallengePurpose = pgEnum("runtime_device_challenge_purpose", [
+  "registration",
+  "session",
+]);
+
 export const auditResult = pgEnum("audit_result", ["allowed", "denied"]);
 export const auditAction = pgEnum("audit_action", [
   "BUNDLE_CREATED",
@@ -137,6 +147,8 @@ export const auditAction = pgEnum("audit_action", [
   "RUNTIME_SESSION_CREATED",
   "RUNTIME_SESSION_REVOKED",
   "RUNTIME_SESSION_HEARTBEAT_TIMEOUT",
+  "RUNTIME_DEVICE_REGISTERED",
+  "RUNTIME_DEVICE_REVOKED",
   "APP_RUNTIME_ENABLED",
   "APP_RUNTIME_DISABLED",
   "APP_CONNECTION_VERIFIED",
@@ -292,6 +304,9 @@ export const runtimeSession = pgTable(
     accessTokenId: text("access_token_id").references(() => accessToken.id, {
       onDelete: "set null",
     }),
+    deviceId: text("device_id").references(() => runtimeDevice.id, {
+      onDelete: "set null",
+    }),
     sessionTokenHash: text("session_token_hash").notNull().unique(),
     status: runtimeSessionStatus("status").notNull().default("active"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -306,6 +321,56 @@ export const runtimeSession = pgTable(
     index("runtime_session_environment_id_idx").on(table.environmentId),
     index("runtime_session_project_id_idx").on(table.projectId),
   ],
+);
+
+export const runtimeDevice = pgTable(
+  "runtime_device",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    environmentId: text("environment_id")
+      .notNull()
+      .references(() => environment.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    publicKey: text("public_key").notNull().unique(),
+    label: text("label").notNull(),
+    status: runtimeDeviceStatus("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("runtime_device_environment_id_idx").on(table.environmentId),
+    index("runtime_device_user_id_idx").on(table.userId),
+  ],
+);
+
+export const runtimeDeviceChallenge = pgTable(
+  "runtime_device_challenge",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    environmentId: text("environment_id")
+      .notNull()
+      .references(() => environment.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    publicKey: text("public_key").notNull(),
+    label: text("label"),
+    purpose: runtimeDeviceChallengePurpose("purpose").notNull(),
+    challenge: text("challenge").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("runtime_device_challenge_expires_at_idx").on(table.expiresAt)],
 );
 
 export const auditLog = pgTable(

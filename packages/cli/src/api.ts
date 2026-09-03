@@ -35,6 +35,8 @@ export interface RuntimeSession {
   secrets: RuntimeSecrets;
 }
 
+export interface RuntimeDeviceChallenge { challengeId: string; challenge: string }
+
 type SecretsResult =
   | { kind: "success"; secrets: RuntimeSecrets }
   | {
@@ -102,6 +104,12 @@ function isRuntimeSession(value: unknown): value is RuntimeSession {
     typeof response.sessionToken === "string" &&
     isRuntimeSecrets(response.secrets)
   );
+}
+
+function isRuntimeDeviceChallenge(value: unknown): value is RuntimeDeviceChallenge {
+  if (!value || typeof value !== "object") return false;
+  const response = value as Record<string, unknown>;
+  return typeof response.challengeId === "string" && response.challengeId.startsWith("dch_") && typeof response.challenge === "string";
 }
 
 export async function fetchRuntimeSecrets(
@@ -175,6 +183,7 @@ export async function createRuntimeSession(
   apiBaseUrl: string,
   token: string,
   projectId: string,
+  proof: { challengeId: string; signature: string },
 ): Promise<SessionResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
@@ -185,7 +194,7 @@ export async function createRuntimeSession(
         authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ projectId }),
+      body: JSON.stringify({ projectId, ...proof }),
       signal: controller.signal,
     });
     if (response.status === 401 || response.status === 403)
@@ -206,4 +215,45 @@ export async function createRuntimeSession(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function deviceRequest(
+  apiBaseUrl: string,
+  token: string,
+  path: string,
+  body: Record<string, string>,
+) {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error("Device authentication failed");
+  const result: unknown = await response.json();
+  if (!isRuntimeDeviceChallenge(result)) throw new Error("Device authentication failed");
+  return result;
+}
+
+export async function registerRuntimeDevice(
+  apiBaseUrl: string,
+  token: string,
+  device: { publicKey: string; sign(challengeId: string, challenge: string): string },
+  label: string,
+) {
+  const challenge = await deviceRequest(apiBaseUrl, token, "/api/runtime/devices/registration-challenges", { publicKey: device.publicKey, label });
+  const response = await fetch(`${apiBaseUrl}/api/runtime/devices/register`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ challengeId: challenge.challengeId, signature: device.sign(challenge.challengeId, challenge.challenge) }),
+  });
+  if (!response.ok) throw new Error("Device registration failed");
+}
+
+export async function createRuntimeDeviceProof(
+  apiBaseUrl: string,
+  token: string,
+  device: { publicKey: string; sign(challengeId: string, challenge: string): string },
+) {
+  const challenge = await deviceRequest(apiBaseUrl, token, "/api/runtime/devices/challenges", { publicKey: device.publicKey });
+  return { challengeId: challenge.challengeId, signature: device.sign(challenge.challengeId, challenge.challenge) };
 }

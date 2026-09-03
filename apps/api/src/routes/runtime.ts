@@ -17,9 +17,21 @@ import {
   createRuntimeSession,
   revokeRuntimeSession,
 } from "../services/runtime-session.service.js";
+import {
+  beginRuntimeDeviceChallenge,
+  beginRuntimeDeviceRegistration,
+  completeRuntimeDeviceRegistration,
+} from "../services/runtime-device.service.js";
 
 export const runtimeRouter = Router();
-const runtimeSessionSchema = z.object({ projectId: z.string().min(1).max(128) });
+const runtimeSessionSchema = z.object({
+  projectId: z.string().min(1).max(128),
+  challengeId: z.string().startsWith("dch_").max(64),
+  signature: z.string().min(80).max(256),
+});
+const deviceKeySchema = z.object({ publicKey: z.string().min(64).max(1024) });
+const deviceRegistrationSchema = deviceKeySchema.extend({ label: z.string().min(1).max(128) });
+const deviceProofSchema = z.object({ challengeId: z.string().startsWith("dch_").max(64), signature: z.string().min(80).max(256) });
 
 function requestedAppId(req: Parameters<typeof requireRuntimeToken>[0]) {
   const appId = req.header("x-passway-app-id")?.trim();
@@ -83,6 +95,7 @@ runtimeRouter.post("/runtime/sessions", requireRuntimeToken, async (req, res) =>
       input.data.projectId,
       req.runtimeToken!,
       req.ip ?? "unknown",
+      { challengeId: input.data.challengeId, signature: input.data.signature },
     );
     if (!session) return res.status(401).json({ error: "Unauthorized" });
     res.set({
@@ -94,6 +107,30 @@ runtimeRouter.post("/runtime/sessions", requireRuntimeToken, async (req, res) =>
   } catch {
     return res.status(500).json({ error: "Secret unavailable" });
   }
+});
+
+runtimeRouter.post("/runtime/devices/registration-challenges", requireRuntimeToken, async (req, res) => {
+  res.locals.passwayDisableBodyLogging = true;
+  const input = deviceRegistrationSchema.safeParse(req.body);
+  if (!input.success) return res.status(400).json({ error: "Invalid device input" });
+  const challenge = await beginRuntimeDeviceRegistration(req.runtimeToken!, input.data.publicKey, input.data.label);
+  return challenge ? res.status(201).json(challenge) : res.status(401).json({ error: "Unauthorized" });
+});
+
+runtimeRouter.post("/runtime/devices/register", requireRuntimeToken, async (req, res) => {
+  res.locals.passwayDisableBodyLogging = true;
+  const input = deviceProofSchema.safeParse(req.body);
+  if (!input.success) return res.status(400).json({ error: "Invalid device proof" });
+  const device = await completeRuntimeDeviceRegistration(req.runtimeToken!, input.data.challengeId, input.data.signature);
+  return device ? res.status(201).json(device) : res.status(401).json({ error: "Unauthorized" });
+});
+
+runtimeRouter.post("/runtime/devices/challenges", requireRuntimeToken, async (req, res) => {
+  res.locals.passwayDisableBodyLogging = true;
+  const input = deviceKeySchema.safeParse(req.body);
+  if (!input.success) return res.status(400).json({ error: "Invalid device input" });
+  const challenge = await beginRuntimeDeviceChallenge(req.runtimeToken!, input.data.publicKey);
+  return challenge ? res.status(201).json(challenge) : res.status(401).json({ error: "Unauthorized" });
 });
 
 runtimeRouter.post("/runtime/sessions/:sessionId/revoke", requireAuth, async (req, res) => {

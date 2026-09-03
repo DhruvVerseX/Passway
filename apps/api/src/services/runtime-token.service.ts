@@ -21,6 +21,7 @@ export async function authenticateRuntimeToken(token: string) {
   const [record] = await db
     .select({
       id: accessToken.id,
+      createdByUserId: accessToken.createdByUserId,
       environmentId: accessToken.environmentId,
       expiresAt: accessToken.expiresAt,
       status: accessToken.status,
