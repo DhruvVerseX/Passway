@@ -9,22 +9,28 @@ const CHALLENGE_TTL_MS = 60_000;
 const PUBLIC_KEY_PREFIX = "-----BEGIN PUBLIC KEY-----";
 
 type TokenScope = Awaited<ReturnType<typeof authenticateRuntimeToken>>;
+type RuntimeToken = NonNullable<TokenScope> & { createdByUserId: string };
 type Purpose = "registration" | "session";
 
 function validPublicKey(value: string) {
-  return value.length <= 1024 && value.startsWith(PUBLIC_KEY_PREFIX);
+  if (value.length > 1024 || !value.startsWith(PUBLIC_KEY_PREFIX)) return false;
+  try {
+    return crypto.createPublicKey(value).asymmetricKeyType === "ed25519";
+  } catch {
+    return false;
+  }
 }
 
 function validSignature(value: string) {
   return /^[A-Za-z0-9_-]{80,256}$/.test(value);
 }
 
-function canUseToken(token: TokenScope) {
-  return token && token.createdByUserId && token.environmentStatus === "hosted" && token.runtimeEnabled;
+function canUseToken(token: TokenScope): token is RuntimeToken {
+  return Boolean(token && token.createdByUserId && token.environmentStatus === "hosted" && token.runtimeEnabled);
 }
 
 async function issueChallenge(
-  token: NonNullable<TokenScope>,
+  token: RuntimeToken,
   publicKey: string,
   purpose: Purpose,
   label?: string,
@@ -34,7 +40,7 @@ async function issueChallenge(
   const id = `dch_${crypto.randomUUID()}`;
   await db.insert(runtimeDeviceChallenge).values({
     id,
-    userId: token.createdByUserId!,
+    userId: token.createdByUserId,
     environmentId: token.environmentId,
     projectId: token.projectId,
     publicKey,
@@ -64,18 +70,24 @@ export async function completeRuntimeDeviceRegistration(
   if (!result?.label) return undefined;
 
   const [existing] = await db
-    .select({ id: runtimeDevice.id })
+    .select({ id: runtimeDevice.id, userId: runtimeDevice.userId, environmentId: runtimeDevice.environmentId, projectId: runtimeDevice.projectId, status: runtimeDevice.status })
     .from(runtimeDevice)
     .where(eq(runtimeDevice.publicKey, result.publicKey))
     .limit(1);
   const now = new Date();
+  if (existing && (
+    existing.status !== "active" ||
+    existing.userId !== token.createdByUserId ||
+    existing.environmentId !== token.environmentId ||
+    existing.projectId !== token.projectId
+  )) return undefined;
   const deviceId = existing?.id ?? `dev_${crypto.randomUUID()}`;
   if (existing) {
     await db.update(runtimeDevice).set({ status: "active", label: result.label, revokedAt: null }).where(eq(runtimeDevice.id, deviceId));
   } else {
     await db.insert(runtimeDevice).values({
       id: deviceId,
-      userId: token.createdByUserId!,
+      userId: token.createdByUserId,
       environmentId: token.environmentId,
       projectId: token.projectId,
       publicKey: result.publicKey,
@@ -88,7 +100,7 @@ export async function completeRuntimeDeviceRegistration(
     environmentId: token.environmentId,
     projectId: token.projectId,
     workspaceId: token.workspaceId,
-    actorUserId: token.createdByUserId!,
+    actorUserId: token.createdByUserId,
     accessTokenId: token.id,
     ip: "runtime",
     action: "RUNTIME_DEVICE_REGISTERED",
@@ -104,7 +116,7 @@ export async function beginRuntimeDeviceChallenge(tokenValue: string, publicKey:
     .from(runtimeDevice)
     .where(and(
       eq(runtimeDevice.publicKey, publicKey),
-      eq(runtimeDevice.userId, token.createdByUserId!),
+      eq(runtimeDevice.userId, token.createdByUserId),
       eq(runtimeDevice.environmentId, token.environmentId),
       eq(runtimeDevice.projectId, token.projectId),
       eq(runtimeDevice.status, "active"),
@@ -115,7 +127,7 @@ export async function beginRuntimeDeviceChallenge(tokenValue: string, publicKey:
 }
 
 async function consumeChallenge(
-  token: NonNullable<TokenScope>,
+  token: RuntimeToken,
   challengeId: string,
   signature: string,
   purpose: Purpose,
@@ -125,7 +137,7 @@ async function consumeChallenge(
     .from(runtimeDeviceChallenge)
     .where(and(
       eq(runtimeDeviceChallenge.id, challengeId),
-      eq(runtimeDeviceChallenge.userId, token.createdByUserId!),
+      eq(runtimeDeviceChallenge.userId, token.createdByUserId),
       eq(runtimeDeviceChallenge.environmentId, token.environmentId),
       eq(runtimeDeviceChallenge.projectId, token.projectId),
       eq(runtimeDeviceChallenge.purpose, purpose),
@@ -165,7 +177,7 @@ export async function consumeRuntimeDeviceSessionChallenge(
     .from(runtimeDevice)
     .where(and(
       eq(runtimeDevice.publicKey, challenge.publicKey),
-      eq(runtimeDevice.userId, token.createdByUserId!),
+      eq(runtimeDevice.userId, token.createdByUserId),
       eq(runtimeDevice.environmentId, token.environmentId),
       eq(runtimeDevice.projectId, token.projectId),
       eq(runtimeDevice.status, "active"),

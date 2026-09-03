@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { spawn, type ChildProcess } from "node:child_process";
-import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeSecrets, fetchRuntimeStatus, registerRuntimeDevice } from "./api.js";
+import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeStatus, registerRuntimeDevice } from "./api.js";
 import {
   apiBaseUrl,
   detectLaunchCommand,
@@ -37,16 +37,11 @@ async function verifyRuntime(appId: string, token: string) {
     return undefined;
   }
 
-  const secrets = await fetchRuntimeSecrets(baseUrl, token, appId);
-  if (secrets.kind !== "success") {
-    printSecretFailure(secrets);
-    return undefined;
-  }
-
-  return { status: result.status, secrets: secrets.secrets };
+  return { status: result.status };
 }
 
 async function start(command?: string, args: string[] = []) {
+  const baseUrl = apiBaseUrl();
   const token = await findRuntimeToken();
   if (!token) {
     printMissingToken();

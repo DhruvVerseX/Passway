@@ -1,38 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createRuntimeSession, fetchRuntimeSecrets, fetchRuntimeStatus } from "../api.js";
+import { createRuntimeSession, fetchRuntimeStatus } from "../api.js";
 
 const token = `ps_live_${"a".repeat(43)}`;
 
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
-});
-
-describe("runtime secrets API", () => {
-  it("fetches authorized Vault values for the linked app", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ DB_URL: "postgres://private" })),
-      );
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(
-      fetchRuntimeSecrets("https://api.passway.co.in", token, "environment-id"),
-    ).resolves.toEqual({
-      kind: "success",
-      secrets: { DB_URL: "postgres://private" },
-    });
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      "https://api.passway.co.in/v1/runtime/secrets",
-    );
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({
-      headers: {
-        authorization: `Bearer ${token}`,
-        "x-passway-app-id": "environment-id",
-      },
-    });
-  });
 });
 
 describe("runtime sessions API", () => {
@@ -50,7 +23,7 @@ describe("runtime sessions API", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      createRuntimeSession("https://api.passway.co.in", token, "environment-id"),
+      createRuntimeSession("https://api.passway.co.in", token, "environment-id", { challengeId: "dch_a", signature: "a".repeat(86) }),
     ).resolves.toMatchObject({
       kind: "success",
       session: { sessionId: "sess_a", secrets: { DB_URL: "postgres://private" } },
@@ -59,7 +32,7 @@ describe("runtime sessions API", () => {
       "https://api.passway.co.in/api/runtime/sessions",
     );
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
-      projectId: "environment-id",
+      projectId: "environment-id", challengeId: "dch_a", signature: "a".repeat(86),
     });
   });
 });

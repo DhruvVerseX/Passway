@@ -47,6 +47,14 @@ export type ApiRuntimeToken = {
   createdAt: string;
 };
 
+export type ApiRuntimeDevice = {
+  id: string;
+  label: string;
+  status: "active" | "revoked";
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
 export type ApiAppRuntime = {
   id: string;
   name: string;
@@ -196,6 +204,19 @@ export function rotateRuntimeToken(environmentId: string) {
   return request<ApiRuntimeToken>(
     `/v1/environments/${encodeURIComponent(environmentId)}/runtime-tokens/rotate`,
     { method: "POST" },
+  );
+}
+
+export function listRuntimeDevices(environmentId: string) {
+  return request<{ devices: ApiRuntimeDevice[] }>(
+    `/v1/environments/${encodeURIComponent(environmentId)}/runtime-devices`,
+  );
+}
+
+export function revokeRuntimeDevice(environmentId: string, deviceId: string) {
+  return request<void>(
+    `/v1/environments/${encodeURIComponent(environmentId)}/runtime-devices/${encodeURIComponent(deviceId)}`,
+    { method: "DELETE" },
   );
 }
 

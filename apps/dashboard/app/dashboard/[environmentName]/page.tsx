@@ -35,11 +35,14 @@ import {
   hostAppRuntime,
   importEnv,
   listEnvironments,
+  listRuntimeDevices,
   listSecrets,
   lockEnvironment,
   PasswayApiError,
   rotateRuntimeToken,
+  revokeRuntimeDevice,
   type ApiEnvironment,
+  type ApiRuntimeDevice,
   type ApiSecret,
 } from "@/lib/passway-api";
 
@@ -310,6 +313,7 @@ export default function EnvironmentDashboard() {
   const [toast, setToast] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Secrets");
   const [openSecretActionsId, setOpenSecretActionsId] = useState<string | null>(null);
+  const [devices, setDevices] = useState<ApiRuntimeDevice[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -352,9 +356,15 @@ export default function EnvironmentDashboard() {
           activeRuntimeSessions: matched.activeRuntimeSessions,
           revocationLevel: matched.revocationLevel,
         });
-        const result = await listSecrets(matched.id);
+        const [result, deviceResult] = await Promise.all([
+          listSecrets(matched.id),
+          listRuntimeDevices(matched.id),
+        ]);
         const secretsLocked = matched.status === "locked" || matched.status === "hosted";
-        if (active) setSecrets(result.secrets.map((item) => fromApiSecret(item, secretsLocked)));
+        if (active) {
+          setSecrets(result.secrets.map((item) => fromApiSecret(item, secretsLocked)));
+          setDevices(deviceResult.devices);
+        }
       } catch (error) {
         if (active) {
           setLoadError(
@@ -561,6 +571,22 @@ export default function EnvironmentDashboard() {
       notify(`${currentEnvironment.name} runtime disabled`);
     } catch (error) {
       notify(error instanceof PasswayApiError ? error.message : "Unable to disable vault runtime");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const revokeDevice = async (deviceId: string) => {
+    if (!environmentId) return;
+    setIsSaving(true);
+    try {
+      await revokeRuntimeDevice(environmentId, deviceId);
+      setDevices((current) => current.map((device) =>
+        device.id === deviceId ? { ...device, status: "revoked" } : device,
+      ));
+      notify("Device revoked and its active sessions stopped");
+    } catch (error) {
+      notify(error instanceof PasswayApiError ? error.message : "Unable to revoke device");
     } finally {
       setIsSaving(false);
     }
@@ -945,6 +971,29 @@ export default function EnvironmentDashboard() {
             </div>
           </section>
         </>
+      ) : activeTab === "Access" ? (
+        <section className="mt-8">
+          <div className="flex items-end justify-between border-b border-white/[0.07] pb-4">
+            <div>
+              <h2 className="text-base font-semibold text-white/90">Trusted devices</h2>
+              <p className="mt-1 text-xs text-white/35">Each device proves possession of its Ed25519 key before a runtime session can start.</p>
+            </div>
+            <span className="text-xs text-white/35">{devices.filter((device) => device.status === "active").length} active</span>
+          </div>
+          <div className="divide-y divide-white/[0.07]">
+            {devices.length ? devices.map((device) => (
+              <div key={device.id} className="flex items-center justify-between gap-4 py-4">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-white/80">{device.label}</p>
+                  <p className="mt-1 text-[11px] text-white/35">Last used: {relativeTime(device.lastUsedAt)}</p>
+                </div>
+                {device.status === "active" ? (
+                  <button onClick={() => void revokeDevice(device.id)} disabled={isSaving} className="h-8 rounded-lg border border-red-300/20 px-3 text-xs font-medium text-red-200/80 transition hover:bg-red-300/[0.1] disabled:opacity-40">Revoke device</button>
+                ) : <span className="text-xs text-white/30">Revoked</span>}
+              </div>
+            )) : <p className="py-10 text-center text-xs text-white/35">No trusted devices yet.</p>}
+          </div>
+        </section>
       ) : (
         <section className="mt-8 rounded-2xl border border-dashed border-white/[0.1] p-12 text-center">
           <span className="mx-auto grid size-11 place-items-center rounded-xl border border-white/[0.07] text-white/25">

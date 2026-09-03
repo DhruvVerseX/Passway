@@ -19,6 +19,8 @@ import {
   revokeRuntimeToken,
   rotateRuntimeToken,
 } from "../services/runtime-token.service.js";
+import { listRuntimeDevices, revokeRuntimeDevice } from "../services/runtime-device.service.js";
+import { pushRuntimeSessionRevoke } from "../runtime-websocket.js";
 
 export const environmentsRouter = Router();
 
@@ -166,6 +168,32 @@ environmentsRouter.delete(
       req.ip ?? "unknown",
     );
     if (!revoked) return res.status(404).json({ error: "Not found" });
+    return res.status(204).send();
+  },
+);
+
+environmentsRouter.get(
+  "/environments/:environmentId/runtime-devices",
+  requireAuth,
+  async (req, res) => {
+    const devices = await listRuntimeDevices(req.params.environmentId, req.passwayUser!.id);
+    return res.json({ devices });
+  },
+);
+
+environmentsRouter.delete(
+  "/environments/:environmentId/runtime-devices/:deviceId",
+  requireAuth,
+  requireRecentAuth,
+  async (req, res) => {
+    const sessions = await revokeRuntimeDevice(
+      req.params.environmentId,
+      req.params.deviceId,
+      req.passwayUser!.id,
+      req.ip ?? "unknown",
+    );
+    if (!sessions) return res.status(404).json({ error: "Not found" });
+    sessions.forEach(pushRuntimeSessionRevoke);
     return res.status(204).send();
   },
 );

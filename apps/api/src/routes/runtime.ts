@@ -6,7 +6,6 @@ import { pushRuntimeSessionRevoke } from "../runtime-websocket.js";
 import { writeAudit } from "../services/audit.service.js";
 import { recordAppHealth } from "../services/app-runtime.service.js";
 import {
-  getRuntimeSecretBundle,
   verifyRuntimeSecretBundle,
 } from "../services/runtime-secret.service.js";
 import {
@@ -37,53 +36,6 @@ function requestedAppId(req: Parameters<typeof requireRuntimeToken>[0]) {
   const appId = req.header("x-passway-app-id")?.trim();
   return appId && appId.length <= 128 ? appId : undefined;
 }
-
-runtimeRouter.get("/runtime/secrets", requireRuntimeToken, async (req, res) => {
-  // Plaintext secrets leave this endpoint, so any body logger must skip it.
-  res.locals.passwayDisableBodyLogging = true;
-  try {
-    const token = await authenticateRuntimeToken(req.runtimeToken!);
-    if (!token || token.environmentStatus !== "hosted") {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const appId = requestedAppId(req);
-    if (!appId || appId !== token.environmentId) {
-      return res.status(403).json({ error: "Unauthorized" });
-    }
-    if (!token.runtimeEnabled) {
-      return res.status(423).json({ error: "Vault runtime is disabled" });
-    }
-
-    const secrets = await getRuntimeSecretBundle(appId);
-    res.set({
-      "Cache-Control": "no-store, no-cache, must-revalidate, private",
-      Pragma: "no-cache",
-      "X-Content-Type-Options": "nosniff",
-    });
-    touchRuntimeToken(token.id);
-    await Promise.all([
-      writeAudit({
-        environmentId: token.environmentId,
-        projectId: token.projectId,
-        workspaceId: token.workspaceId,
-        accessTokenId: token.id,
-        ip: req.ip ?? "unknown",
-        action: "RUNTIME_TOKEN_USED",
-      }),
-      writeAudit({
-        environmentId: token.environmentId,
-        projectId: token.projectId,
-        workspaceId: token.workspaceId,
-        accessTokenId: token.id,
-        ip: req.ip ?? "unknown",
-        action: "RUNTIME_SECRET_BUNDLE_READ",
-      }),
-    ]);
-    return res.json(secrets);
-  } catch {
-    return res.status(500).json({ error: "Secret unavailable" });
-  }
-});
 
 runtimeRouter.post("/runtime/sessions", requireRuntimeToken, async (req, res) => {
   res.locals.passwayDisableBodyLogging = true;

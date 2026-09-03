@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   writeAudit: vi.fn(),
   createRuntimeSession: vi.fn(),
   revokeRuntimeSession: vi.fn(),
+  beginRuntimeDeviceChallenge: vi.fn(),
+  beginRuntimeDeviceRegistration: vi.fn(),
+  completeRuntimeDeviceRegistration: vi.fn(),
   pushRuntimeSessionRevoke: vi.fn(),
 }));
 
@@ -30,6 +33,11 @@ vi.mock("../../services/audit.service.js", () => ({
 vi.mock("../../services/runtime-session.service.js", () => ({
   createRuntimeSession: mocks.createRuntimeSession,
   revokeRuntimeSession: mocks.revokeRuntimeSession,
+}));
+vi.mock("../../services/runtime-device.service.js", () => ({
+  beginRuntimeDeviceChallenge: mocks.beginRuntimeDeviceChallenge,
+  beginRuntimeDeviceRegistration: mocks.beginRuntimeDeviceRegistration,
+  completeRuntimeDeviceRegistration: mocks.completeRuntimeDeviceRegistration,
 }));
 vi.mock("../../runtime-websocket.js", () => ({
   pushRuntimeSessionRevoke: mocks.pushRuntimeSessionRevoke,
@@ -55,7 +63,7 @@ async function status() {
   }
 }
 
-async function createSession(body: unknown = { projectId: "env-a" }) {
+async function createSession(body: unknown = { projectId: "env-a", challengeId: "dch_a", signature: "a".repeat(86) }) {
   const { runtimeRouter } = await import("../runtime.js");
   const app = express().use(express.json()).use("/api", runtimeRouter);
   const server = app.listen(0);
@@ -113,6 +121,11 @@ describe("runtime sessions", () => {
       secrets: { DATABASE_URL: "postgres://private" },
     });
     expect(response.status).toBe(201);
-    expect(mocks.createRuntimeSession).toHaveBeenCalledWith("env-a", token, expect.any(String));
+    expect(mocks.createRuntimeSession).toHaveBeenCalledWith(
+      "env-a",
+      token,
+      expect.any(String),
+      { challengeId: "dch_a", signature: "a".repeat(86) },
+    );
   });
 });
