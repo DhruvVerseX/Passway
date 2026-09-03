@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { project, workspace } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
-import { requireAuth } from "../middleware/require-auth.js";
+import { requireAuth, requireRecentAuth } from "../middleware/require-auth.js";
 import { redactKnownSecrets } from "../redact.js";
 import {
   createEnvironment,
@@ -163,6 +163,7 @@ resourcesRouter.post(
 resourcesRouter.post(
   "/projects/:projectId/environments",
   requireAuth,
+  requireRecentAuth,
   async (req, res) => {
     let input;
     try {

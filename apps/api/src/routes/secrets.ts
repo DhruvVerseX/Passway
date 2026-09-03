@@ -1,5 +1,5 @@
 import { Router, text } from "express";
-import { requireAuth } from "../middleware/require-auth.js";
+import { requireAuth, requireRecentAuth } from "../middleware/require-auth.js";
 import { writeAudit } from "../services/audit.service.js";
 import {
   SecretAccessError,
@@ -34,6 +34,7 @@ function handleSecretError(
 secretsRouter.post(
   "/environments/:environmentId/secrets",
   requireAuth,
+  requireRecentAuth,
   async (req, res) => {
     try {
       const input = secretService.parseWriteInput(req.body);
@@ -64,6 +65,7 @@ secretsRouter.post(
   "/environments/:environmentId/import",
   text({ type: ["text/plain", "application/octet-stream"], limit: "512kb" }),
   requireAuth,
+  requireRecentAuth,
   async (req, res) => {
     try {
       if (typeof req.body !== "string") {
@@ -111,6 +113,7 @@ secretsRouter.get(
 secretsRouter.delete(
   "/environments/:environmentId/secrets/:key",
   requireAuth,
+  requireRecentAuth,
   async (req, res) => {
     try {
       const result = await secretService.delete(

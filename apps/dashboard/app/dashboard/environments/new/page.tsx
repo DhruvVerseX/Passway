@@ -124,17 +124,8 @@ export default function CreateEnvironmentPage() {
     }
     if (step < 3) setStep((current) => current + 1);
     else {
-      sessionStorage.setItem(
-        `passway_environment_${slug}`,
-        JSON.stringify({
-          name: name.trim(),
-          slug,
-          type,
-          description: description.trim(),
-          secrets,
-          createdAt: new Date().toISOString(),
-        }),
-      );
+      setSecrets([]);
+      setManualValue("");
       router.push("/dashboard/environments");
     }
   };
@@ -356,6 +347,8 @@ export default function CreateEnvironmentPage() {
                           value={manualKey}
                           onChange={(event) => setManualKey(event.target.value)}
                           placeholder="SECRET_KEY"
+                          autoComplete="off"
+                          spellCheck={false}
                           className="mono h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-[11px] uppercase text-white outline-none placeholder:normal-case placeholder:text-white/25 focus:border-[#b9f55d]/40"
                         />
                         <input
@@ -365,6 +358,9 @@ export default function CreateEnvironmentPage() {
                           }
                           placeholder="Secret value"
                           type="password"
+                          autoComplete="off"
+                          data-passway-sensitive="true"
+                          spellCheck={false}
                           className="mono h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-[11px] text-white outline-none placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/40"
                         />
                         <button

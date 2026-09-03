@@ -181,14 +181,9 @@ export function EnvironmentOnboardingModal({
       }
 
       const hosted = await hostEnvironment(environment.environment.id);
-      sessionStorage.setItem(
-        `passway_environment_${slug}`,
-        JSON.stringify({
-          ...environment.environment,
-          secrets,
-          runtimeTokenCreatedAt: hosted.createdAt,
-        }),
-      );
+      setSecrets([]);
+      setManualValue("");
+      setUploadedContent("");
       setRuntimeToken(hosted.token);
       setStep(4);
     } catch (error) {
@@ -396,6 +391,8 @@ export function EnvironmentOnboardingModal({
                       value={manualKey}
                       onChange={(event) => setManualKey(event.target.value)}
                       placeholder="SECRET_KEY"
+                      autoComplete="off"
+                      spellCheck={false}
                       className="mono h-8 min-w-0 rounded-md border border-white/[0.08] bg-black/20 px-2.5 text-[10px] uppercase text-white outline-none placeholder:normal-case placeholder:text-white/25 focus:border-[#b9f55d]/40"
                     />
                     <input
@@ -403,6 +400,9 @@ export function EnvironmentOnboardingModal({
                       onChange={(event) => setManualValue(event.target.value)}
                       placeholder="Value"
                       type="password"
+                      autoComplete="off"
+                      data-passway-sensitive="true"
+                      spellCheck={false}
                       className="mono h-8 min-w-0 rounded-md border border-white/[0.08] bg-black/20 px-2.5 text-[10px] text-white outline-none placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/40"
                     />
                     <button

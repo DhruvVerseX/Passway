@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/require-auth.js";
+import { requireAuth, requireRecentAuth } from "../middleware/require-auth.js";
 import {
   AppRuntimeError,
   disableAppRuntime,
@@ -30,7 +30,7 @@ function appRuntimeError(error: unknown, res: Parameters<Parameters<typeof envir
   return res.status(409).json({ error: "Vault runtime is already hosted" });
 }
 
-environmentsRouter.post("/apps/:appId/host", requireAuth, async (req, res) => {
+environmentsRouter.post("/apps/:appId/host", requireAuth, requireRecentAuth, async (req, res) => {
   try {
     return res.status(201).json(await hostAppRuntime(req.params.appId, req.passwayUser!.id, req.ip ?? "unknown"));
   } catch (error) {
@@ -40,7 +40,7 @@ environmentsRouter.post("/apps/:appId/host", requireAuth, async (req, res) => {
   }
 });
 
-environmentsRouter.post("/apps/:appId/disable-runtime", requireAuth, async (req, res) => {
+environmentsRouter.post("/apps/:appId/disable-runtime", requireAuth, requireRecentAuth, async (req, res) => {
   try {
     const disabled = await disableAppRuntime(req.params.appId, req.passwayUser!.id, req.ip ?? "unknown");
     if (!disabled) return res.status(409).json({ error: "Vault runtime is not hosted" });
@@ -95,6 +95,7 @@ environmentsRouter.post(
 environmentsRouter.post(
   "/environments/:environmentId/host",
   requireAuth,
+  requireRecentAuth,
   async (req, res) => {
     try {
       const hosted = await hostEnvironment(
@@ -126,6 +127,7 @@ environmentsRouter.post(
 environmentsRouter.post(
   "/environments/:environmentId/runtime-tokens/rotate",
   requireAuth,
+  requireRecentAuth,
   async (req, res) => {
     const rotated = await rotateRuntimeToken(
       req.params.environmentId,
@@ -155,6 +157,7 @@ environmentsRouter.get(
 environmentsRouter.delete(
   "/environments/:environmentId/runtime-tokens/:tokenId",
   requireAuth,
+  requireRecentAuth,
   async (req, res) => {
     const revoked = await revokeRuntimeToken(
       req.params.environmentId,

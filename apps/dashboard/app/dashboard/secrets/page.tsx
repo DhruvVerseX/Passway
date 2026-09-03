@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Clipboard,
   Eye,
-  EyeOff,
   KeyRound,
   LockKeyhole,
   MoreHorizontal,
@@ -123,6 +122,8 @@ function AddSecretPanel({
               autoFocus
               value={key}
               onChange={(event) => setKey(event.target.value)}
+              autoComplete="off"
+              spellCheck={false}
               className="mono h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 text-sm uppercase text-white outline-none transition placeholder:normal-case placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]"
               placeholder="e.g. STRIPE_SECRET_KEY"
             />
@@ -131,10 +132,14 @@ function AddSecretPanel({
             <span className="mb-2 block text-xs font-medium text-white/65">
               Secret value
             </span>
-            <textarea
+            <input
+              type="password"
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              className="mono min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-white outline-none transition placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]"
+              autoComplete="off"
+              data-passway-sensitive="true"
+              spellCheck={false}
+              className="mono h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 text-sm text-white outline-none transition placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/45 focus:ring-4 focus:ring-[#b9f55d]/[0.06]"
               placeholder="Paste the value here"
             />
           </label>
@@ -197,8 +202,6 @@ export default function SecretsPage() {
   const [secrets, setSecrets] = useState(initialSecrets);
   const [query, setQuery] = useState("");
   const [environment, setEnvironment] = useState<"All" | Environment>("All");
-  const [revealed, setRevealed] = useState<string[]>([]);
-  const [copied, setCopied] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -213,33 +216,26 @@ export default function SecretsPage() {
             .includes(normalized)),
     );
   }, [environment, query, secrets]);
-  const toggleReveal = (id: string) =>
-    setRevealed((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
+  const notify = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 2400);
+  };
+  const toggleReveal = (_id: string) =>
+    notify("Plaintext values are not displayed in the dashboard");
   const copySecret = async (secret: Secret) => {
-    try {
-      await navigator.clipboard.writeText(secret.value);
-    } catch {
-      /* embedded previews can block clipboard */
-    }
-    setCopied(secret.id);
-    window.setTimeout(() => setCopied(null), 1700);
+    void secret;
+    notify("Plaintext values are not copied from the dashboard");
   };
   const addSecret = (secret: Secret) => {
     setSecrets((current) => [secret, ...current]);
     setAddOpen(false);
-    setToast(`${secret.key} added to ${secret.environment}`);
-    window.setTimeout(() => setToast(null), 2800);
+    notify(`${secret.key} added to ${secret.environment}`);
   };
   const removeSecret = (id: string) => {
     const secret = secrets.find((item) => item.id === id);
     setSecrets((current) => current.filter((item) => item.id !== id));
     if (secret) {
-      setToast(`${secret.key} removed`);
-      window.setTimeout(() => setToast(null), 2400);
+      notify(`${secret.key} removed`);
     }
   };
 
@@ -407,7 +403,6 @@ export default function SecretsPage() {
           </div>
           {visibleSecrets.length ? (
             visibleSecrets.map((secret) => {
-              const isRevealed = revealed.includes(secret.id);
               return (
                 <article
                   key={secret.id}
@@ -431,27 +426,23 @@ export default function SecretsPage() {
                   </div>
                   <div className="flex min-w-0 items-center gap-2">
                     <code
-                      className={`min-w-0 truncate font-mono text-[10px] ${isRevealed ? "text-white/65" : "text-white/35"}`}
+                      className="min-w-0 truncate font-mono text-[10px] text-white/35"
                     >
-                      {isRevealed ? secret.value : "••••••••••••••••••••"}
+                      ••••••••••••••••••••
                     </code>
                     <button
                       onClick={() => toggleReveal(secret.id)}
                       className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70"
-                      aria-label={`${isRevealed ? "Hide" : "Reveal"} ${secret.key}`}
+                      aria-label={`Reveal ${secret.key}`}
                     >
-                      {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                      <Eye size={13} />
                     </button>
                     <button
                       onClick={() => copySecret(secret)}
                       className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70"
                       aria-label={`Copy ${secret.key}`}
                     >
-                      {copied === secret.id ? (
-                        <Check size={13} className="text-[#b9f55d]" />
-                      ) : (
-                        <Clipboard size={13} />
-                      )}
+                      <Clipboard size={13} />
                     </button>
                   </div>
                   <div>

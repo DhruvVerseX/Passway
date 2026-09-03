@@ -1,4 +1,4 @@
-import { apiBaseURL } from "./auth-ui";
+import { apiBaseURL, signInURL } from "./auth-ui";
 
 export type ApiProject = {
   id: string;
@@ -100,6 +100,13 @@ async function request<T>(path: string, init: RequestInit = {}) {
       typeof body === "object" && body && "error" in body
         ? String(body.error)
         : "Passway API request failed";
+    if (
+      response.status === 401 &&
+      message.toLowerCase().includes("re-authentication") &&
+      typeof window !== "undefined"
+    ) {
+      window.location.assign(signInURL(window.location.href));
+    }
     throw new PasswayApiError(message, response.status, body);
   }
 

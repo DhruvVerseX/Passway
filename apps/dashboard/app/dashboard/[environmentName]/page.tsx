@@ -2,13 +2,11 @@
 
 import {
   Activity,
-  Check,
   CheckCircle2,
   ChevronDown,
   Clipboard,
   Download,
   Eye,
-  EyeOff,
   FileKey2,
   FileUp,
   KeyRound,
@@ -207,6 +205,8 @@ function AddSecretModal({
                 value={key}
                 onChange={(event) => setKey(event.target.value)}
                 placeholder="STRIPE_SECRET_KEY"
+                autoComplete="off"
+                spellCheck={false}
                 className="mono h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 text-sm uppercase text-white outline-none placeholder:normal-case placeholder:text-white/25 focus:border-[#b9f55d]/45"
               />
             </label>
@@ -214,11 +214,15 @@ function AddSecretModal({
               <span className="mb-2 block text-xs font-medium text-white/65">
                 Secret value
               </span>
-              <textarea
+              <input
+                type="password"
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 placeholder="Paste the value here"
-                className="mono min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-white outline-none placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/45"
+                autoComplete="off"
+                data-passway-sensitive="true"
+                spellCheck={false}
+                className="mono h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 text-sm text-white outline-none placeholder:font-sans placeholder:text-white/25 focus:border-[#b9f55d]/45"
               />
             </label>
           </div>
@@ -284,24 +288,13 @@ function AddSecretModal({
 export default function EnvironmentDashboard() {
   const params = useParams<{ environmentName: string }>();
   const slug = params.environmentName || "environment";
-  const stored =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem(`passway_environment_${slug}`)
-      : null;
-  const environment: StoredEnvironment = stored
-    ? (JSON.parse(stored) as {
-        name: string;
-        type: EnvironmentType;
-        description: string;
-        secrets: Secret[];
-      })
-    : {
-        name: formatName(slug),
-        type: "Development" as EnvironmentType,
-        description: "Secure runtime configuration for this vault.",
-        secrets: [],
-        status: "draft",
-      };
+  const environment: StoredEnvironment = {
+    name: formatName(slug),
+    type: "Development" as EnvironmentType,
+    description: "Secure runtime configuration for this vault.",
+    secrets: [],
+    status: "draft",
+  };
 
   const environmentId = (environment as StoredEnvironment).id ?? slug;
   const [secrets, setSecrets] = useState<Secret[]>(environment.secrets ?? []);
@@ -313,8 +306,6 @@ export default function EnvironmentDashboard() {
   const [runtimeToken, setRuntimeToken] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Recently updated">("All");
-  const [revealed, setRevealed] = useState<string[]>([]);
-  const [copied, setCopied] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Secrets");
@@ -394,7 +385,7 @@ export default function EnvironmentDashboard() {
     return secrets.filter(
       (secret) =>
         !normalized ||
-        `${secret.key} ${secret.value}`.toLowerCase().includes(normalized),
+        secret.key.toLowerCase().includes(normalized),
     );
   }, [query, secrets]);
   const notify = (message: string) => {
@@ -446,33 +437,11 @@ export default function EnvironmentDashboard() {
     }
   };
   const copyValue = async (secret: Secret) => {
-    if (secret.locked || !secret.value) {
-      notify("Plaintext values are not returned after hosting");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(secret.value);
-    } catch {
-      /* embedded previews can block clipboard */
-    }
-    setCopied(secret.id);
-    window.setTimeout(() => setCopied(null), 1700);
+    void secret;
+    notify("Plaintext values are not displayed in the dashboard");
   };
   const downloadEnv = () => {
-    if (isLocked) {
-      notify("Export is unavailable after the vault is hosted");
-      return;
-    }
-    const content = secrets
-      .map((secret) => `${secret.key}=${secret.value}`)
-      .join("\n");
-    const blob = new Blob([content], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${slug}.env`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    notify("Environment file prepared");
+    notify("Plaintext export is unavailable in the dashboard");
   };
   const remove = async (id: string) => {
     const item = secrets.find((secret) => secret.id === id);
@@ -875,7 +844,6 @@ export default function EnvironmentDashboard() {
               </div>
               {visible.length ? (
                 visible.map((secret) => {
-                  const isRevealed = revealed.includes(secret.id);
                   return (
                     <article
                       key={secret.id}
@@ -896,37 +864,23 @@ export default function EnvironmentDashboard() {
                       </div>
                       <div className="flex min-w-0 items-center gap-2">
                         <code
-                          className={`min-w-0 truncate font-mono text-[10px] ${isRevealed ? "text-white/65" : "text-white/35"}`}
+                          className="min-w-0 truncate font-mono text-[10px] text-white/35"
                         >
-                          {isRevealed ? secret.value : "••••••••••••••••••••"}
+                          ••••••••••••••••••••
                         </code>
                         <button
-                          onClick={() =>
-                            setRevealed((current) =>
-                              current.includes(secret.id)
-                                ? current.filter((id) => id !== secret.id)
-                                : [...current, secret.id],
-                            )
-                          }
+                          onClick={() => notify("Plaintext values are not displayed in the dashboard")}
                           className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70"
-                          aria-label={`${isRevealed ? "Hide" : "Reveal"} ${secret.key}`}
+                          aria-label={`Reveal ${secret.key}`}
                         >
-                          {isRevealed ? (
-                            <EyeOff size={13} />
-                          ) : (
-                            <Eye size={13} />
-                          )}
+                          <Eye size={13} />
                         </button>
                         <button
                           onClick={() => copyValue(secret)}
                           className="grid size-7 shrink-0 place-items-center rounded-md text-white/25 transition hover:bg-white/[0.06] hover:text-white/70"
                           aria-label={`Copy ${secret.key}`}
                         >
-                          {copied === secret.id ? (
-                            <Check size={13} className="text-[#b9f55d]" />
-                          ) : (
-                            <Clipboard size={13} />
-                          )}
+                          <Clipboard size={13} />
                         </button>
                       </div>
                       <div>
@@ -965,7 +919,7 @@ export default function EnvironmentDashboard() {
                           </button>
                           {openSecretActionsId === secret.id && (
                             <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-xl border border-white/10 bg-[#171b14] p-1 shadow-2xl" role="menu">
-                              <button onClick={() => { setOpenSecretActionsId(null); setRevealed((current) => current.includes(secret.id) ? current.filter((id) => id !== secret.id) : [...current, secret.id]); }} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">{isRevealed ? "Hide value" : "Reveal value"}</button>
+                              <button onClick={() => { setOpenSecretActionsId(null); notify("Plaintext values are not displayed in the dashboard"); }} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Reveal value</button>
                               <button onClick={() => { setOpenSecretActionsId(null); void copyValue(secret); }} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-white/65 hover:bg-white/[0.06] hover:text-white" role="menuitem">Copy value</button>
                               <button onClick={() => { setOpenSecretActionsId(null); void remove(secret.id); }} disabled={isSaving || secret.locked} className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-red-300/80 hover:bg-red-400/10 hover:text-red-200 disabled:opacity-40" role="menuitem">Delete secret</button>
                             </div>
