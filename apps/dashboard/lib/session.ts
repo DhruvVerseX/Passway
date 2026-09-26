@@ -26,12 +26,15 @@ export async function getSession(): Promise<ApiSession | null> {
     const response = await fetch(`${apiBaseURL()}/api/auth/get-session`, {
       headers: { cookie },
       cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
 
-    if (!response.ok) return null;
+    if (response.status === 401 || response.status === 403) return null;
+    if (!response.ok) throw new Error("Session service unavailable");
     return (await response.json()) as ApiSession | null;
   } catch {
-    return null;
+    // An unreachable API does not mean the user's session has expired.
+    throw new Error("Passway could not verify your session. Please try again.");
   }
 }
 

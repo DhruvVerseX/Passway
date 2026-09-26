@@ -8,6 +8,7 @@ import { environmentsRouter } from "./routes/environments.js";
 import { resourcesRouter } from "./routes/resources.js";
 import { runtimeRouter } from "./routes/runtime.js";
 import { attachRuntimeSessionWebSocket } from "./runtime-websocket.js";
+import { authClientIp } from "./middleware/auth-client-ip.js";
 
 const app = express();
 const allowedOrigins = getAllowedOrigins();
@@ -34,8 +35,8 @@ app.use((req, res, next) => {
 });
 
 const authHandler = toNodeHandler(auth.handler);
-app.all("/api/auth", authHandler);
-app.all("/api/auth/*", authHandler);
+app.all("/api/auth", authClientIp, authHandler);
+app.all("/api/auth/*", authClientIp, authHandler);
 
 app.use(express.json());
 

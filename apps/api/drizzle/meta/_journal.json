@@ -57,6 +57,13 @@
       "when": 1788334174158,
       "tag": "0007_runtime_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790432517511,
+      "tag": "0008_complex_stellaris",
+      "breakpoints": true
     }
   ]
 }

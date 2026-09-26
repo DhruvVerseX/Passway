@@ -27,9 +27,14 @@ export default function SignupPage() {
   const continueWith = async (provider: "google" | "github") => {
     setLoading(provider);
     setErrorMessage(null);
-    const { error } = await authClient.signIn.social({ provider, callbackURL: callbackURL() });
-    if (error) {
-      setErrorMessage(error.message ?? "Unable to continue with this provider.");
+    try {
+      const { error } = await authClient.signIn.social({ provider, callbackURL: callbackURL() });
+      if (error) {
+        setErrorMessage(error.message ?? "Unable to continue with this provider.");
+        setLoading(null);
+      }
+    } catch {
+      setErrorMessage("Unable to connect to Passway. Please try again shortly.");
       setLoading(null);
     }
   };
@@ -40,20 +45,25 @@ export default function SignupPage() {
 
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email"));
-    const { error } = await authClient.signUp.email({
-      name: String(form.get("name")),
-      email,
-      password: String(form.get("password")),
-      callbackURL: callbackURL(),
-    });
+    try {
+      const { error } = await authClient.signUp.email({
+        name: String(form.get("name")),
+        email,
+        password: String(form.get("password")),
+        callbackURL: callbackURL(),
+      });
 
-    if (error) {
-      setErrorMessage(error.message ?? "Unable to create your account.");
+      if (error) {
+        setErrorMessage(error.message ?? "Unable to create your account.");
+        setLoading(null);
+        return;
+      }
+
+      window.location.assign(`/auth/verify-email?email=${encodeURIComponent(email)}&callbackURL=${encodeURIComponent(callbackURL())}`);
+    } catch {
+      setErrorMessage("Unable to connect to Passway. Please try again shortly.");
       setLoading(null);
-      return;
     }
-
-    window.location.assign(`/auth/verify-email?email=${encodeURIComponent(email)}&callbackURL=${encodeURIComponent(callbackURL())}`);
   };
   return (
     <main className="auth-page min-h-screen bg-[#0b0d0b] text-white selection:bg-[#b9f55d]/25">
@@ -86,11 +96,11 @@ export default function SignupPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={() => continueWith("google")} className="auth-social">
+            <button type="button" onClick={() => continueWith("google")} disabled={loading !== null} className="auth-social">
               {loading === "google" ? <RefreshCw size={15} className="animate-spin" /> : <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4"><path fill="#EA4335" d="M12 10.2v4.1h5.7c-.25 1.32-1.5 3.87-5.7 3.87A6.18 6.18 0 0 1 12 5.8c2.39 0 3.99 1.02 4.91 1.9l3.35-3.23A11.13 11.13 0 0 0 12 1.25a10.75 10.75 0 1 0 0 21.5c6.2 0 10.3-4.36 10.3-10.5 0-.7-.08-1.25-.17-1.78H12Z" /><path fill="#4285F4" d="M22.3 12.25c0-.7-.07-1.25-.17-1.78H12v4.05h5.7c-.28 1.4-1.35 2.67-2.9 3.46l3.3 2.56c2.67-2.45 4.2-6.07 4.2-8.29Z" /><path fill="#FBBC05" d="M5.83 14.34A6.42 6.42 0 0 1 5.5 12c0-.81.14-1.6.4-2.33L2.51 7.05A10.74 10.74 0 0 0 1.25 12c0 1.76.42 3.43 1.17 4.9l3.41-2.56Z" /><path fill="#34A853" d="M12 22.75c2.9 0 5.34-.95 7.12-2.6l-3.3-2.56c-.9.6-2.08 1.03-3.82 1.03a6.13 6.13 0 0 1-5.75-4.15L2.87 17.1A10.75 10.75 0 0 0 12 22.75Z" /></svg>}
               Google
             </button>
-            <button type="button" onClick={() => continueWith("github")} className="auth-social">{loading === "github" ? <RefreshCw size={15} className="animate-spin" /> : <Github size={16} />}GitHub</button>
+            <button type="button" onClick={() => continueWith("github")} disabled={loading !== null} className="auth-social">{loading === "github" ? <RefreshCw size={15} className="animate-spin" /> : <Github size={16} />}GitHub</button>
           </div>
 
           <div className="my-6 flex items-center gap-3"><span className="h-px flex-1 bg-white/[0.065]" /><span className="text-[9px] uppercase text-white/25">or continue with email</span><span className="h-px flex-1 bg-white/[0.065]" /></div>

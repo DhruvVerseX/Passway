@@ -4,6 +4,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { authSchema, db } from "../db/index.js";
 import { getAllowedOrigins, getAuthEnv } from "../env.js";
+import { AUTH_CLIENT_IP_HEADER } from "../middleware/auth-client-ip.js";
 import { sendPasswordResetCodeEmail, sendResetPasswordEmail, sendVerificationCodeEmail } from "../email/resend.js";
 
 const env = getAuthEnv();
@@ -90,6 +91,9 @@ export const auth = betterAuth({
     },
   },
   advanced: {
+    ipAddress: {
+      ipAddressHeaders: [AUTH_CLIENT_IP_HEADER],
+    },
     defaultCookieAttributes: {
       httpOnly: true,
       sameSite: "lax",
