@@ -7,7 +7,19 @@ const CONFIG_FILE = ".passway.json";
 
 export interface ProjectConfig {
   appId: string;
+  apiUrl?: string;
   launchCommand?: string[];
+}
+
+function configuredApiUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) return undefined;
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return undefined;
+  }
 }
 
 function cleanValue(value: string) {
@@ -53,6 +65,9 @@ export async function readProjectConfig(cwd = process.cwd()) {
     const launchCommand = (config as Record<string, unknown>).launchCommand;
     return {
       appId: appId.trim(),
+      ...(configuredApiUrl((config as Record<string, unknown>).apiUrl)
+        ? { apiUrl: configuredApiUrl((config as Record<string, unknown>).apiUrl) }
+        : {}),
       launchCommand:
         Array.isArray(launchCommand) &&
         launchCommand.length > 0 &&
@@ -109,7 +124,14 @@ export function hasValidLocalTokenFormat(token: string) {
   return TOKEN_PATTERN.test(token);
 }
 
-export function apiBaseUrl() {
-  const local = fs.existsSync(path.join(process.cwd(), "apps/api/package.json"));
-  return (process.env.PASSWAY_API_URL ?? (local ? "http://localhost:4000" : "https://api.passway.co.in")).replace(/\/$/, "");
+export function apiBaseUrl(cwd = process.cwd()) {
+  let projectApiUrl: string | undefined;
+  try {
+    const config = JSON.parse(fs.readFileSync(path.join(cwd, CONFIG_FILE), "utf8"));
+    projectApiUrl = configuredApiUrl(config?.apiUrl);
+  } catch {
+    // A missing project config falls back to the normal API default.
+  }
+  const local = fs.existsSync(path.join(cwd, "apps/api/package.json"));
+  return (process.env.PASSWAY_API_URL ?? projectApiUrl ?? (local ? "http://localhost:4000" : "https://api.passway.co.in")).replace(/\/$/, "");
 }

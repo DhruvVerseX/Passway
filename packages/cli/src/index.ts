@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { spawn, type ChildProcess } from "node:child_process";
 import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeStatus, registerRuntimeDevice } from "./api.js";
 import {
@@ -28,6 +28,7 @@ import { secretValues } from "./redact.js";
 import { childEnvironment, executableForPlatform } from "./runtime.js";
 import { connectRuntimeSessionSocket } from "./runtime-session.js";
 import { deviceLabel, getOrCreateRuntimeDeviceKey } from "./device.js";
+import { printPasswordManagerHelp } from "./password-manager.js";
 
 async function verifyRuntime(appId: string, token: string) {
   const baseUrl = apiBaseUrl();
@@ -72,7 +73,7 @@ async function start(command?: string, args: string[] = []) {
     return 1;
   }
 
-  await saveProjectConfig({ appId, launchCommand });
+  await saveProjectConfig({ appId, apiUrl: baseUrl, launchCommand });
   printSetupSuccess(runtime.status, launchCommand);
   return 0;
 }
@@ -166,7 +167,10 @@ async function run() {
   });
 }
 
-if (process.argv[2] === "start") {
+if (["--help", "-h", "help"].includes(process.argv[2] ?? "")) {
+  printPasswordManagerHelp();
+  process.exitCode = 0;
+} else if (process.argv[2] === "start") {
   const commandIndex = process.argv[3] === "--" ? 4 : 3;
   process.exitCode = await start(
     process.argv[commandIndex],

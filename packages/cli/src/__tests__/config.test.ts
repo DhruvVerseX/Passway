@@ -74,6 +74,28 @@ describe("runtime token discovery", () => {
 });
 
 describe("App linking", () => {
+  it("keeps the local API address across setup and new terminals", async () => {
+    await saveProjectConfig({ appId: "app-123", apiUrl: "http://localhost:4000", launchCommand: ["bun", "run", "dev"] }, tempDir);
+    expect(apiBaseUrl(tempDir)).toBe("http://localhost:4000");
+    await expect(readProjectConfig(tempDir)).resolves.toMatchObject({ apiUrl: "http://localhost:4000" });
+  });
+
+  it("gives an explicit environment override priority over project configuration", async () => {
+    await saveProjectConfig({ appId: "app-123", apiUrl: "http://localhost:4000" }, tempDir);
+    const original = process.env.PASSWAY_API_URL;
+    process.env.PASSWAY_API_URL = "https://api.example.com";
+    try {
+      expect(apiBaseUrl(tempDir)).toBe("https://api.example.com");
+    } finally {
+      if (original === undefined) delete process.env.PASSWAY_API_URL;
+      else process.env.PASSWAY_API_URL = original;
+    }
+  });
+
+  it("does not use malformed project API URLs", async () => {
+    await saveProjectConfig({ appId: "app-123", apiUrl: "file:///tmp/test" }, tempDir);
+    expect(apiBaseUrl(tempDir)).toBe("https://api.passway.co.in");
+  });
   it("reads the App ID from the current project's .passway.json", async () => {
     fs.writeFileSync(path.join(tempDir, ".passway.json"), JSON.stringify({ appId: "app-123", launchCommand: ["npm", "run", "dev"] }));
     await expect(findAppId(tempDir)).resolves.toBe("app-123");

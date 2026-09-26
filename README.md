@@ -89,6 +89,41 @@ On hosting, configure API secrets only on the API service. Dashboard/web should 
 
 ## Secure Runtime Secret Injection
 
+### Install the CLI locally before publishing
+
+From the Passway repository, build an installable package and install it globally:
+
+```bash
+npm pack ./packages/cli --pack-destination /tmp
+npm install -g /tmp/passway-cli-0.1.0.tgz
+passway --help
+```
+
+The build requires Bun; running the installed CLI requires Node.js. The installer
+resolves the native OS keyring dependency for the destination machine. Linux
+runtime device registration requires an accessible Secret Service keyring.
+
+For a testing project connected to the local Passway API, run these commands
+from that project's directory after enabling **Host Vault** in the dashboard:
+
+```bash
+export PASSWAY_API_URL=http://localhost:4000
+passway start -- bun run dev
+passway run
+```
+
+Keep the API running with `bun run dev:api` in the Passway repository. The testing
+project must contain `.env` with `PASSWAY_TOKEN` and `.passway.json` with the
+vault/environment `appId`. Sessions are created by the CLI automatically.
+To persist a local API address across terminals, add `"apiUrl":
+"http://localhost:4000"` to `.passway.json`. Successful `passway start` saves the
+API address alongside the launch command. `PASSWAY_API_URL` takes priority when
+explicitly set. Bare `passway` and `passway init` open/create the separate local
+password manager; they do not connect to a hosted runtime vault.
+Outside the Passway repository, the CLI defaults to the production API unless
+`PASSWAY_API_URL` is set. After the package is published to npm, users can install
+it with `npm install -g @passway/cli`.
+
 A hosted environment can provide secrets to a local application without the dashboard ever requesting the plaintext bundle. Keep the one-time runtime token in the developer machine's local `.env` as `PASSWAY_TOKEN`, then set up the project once:
 
 ```bash

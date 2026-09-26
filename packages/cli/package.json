@@ -15,7 +15,7 @@
     "start": "PASSWAY_API_URL=http://localhost:4000 bun --cwd ../.. packages/cli/src/index.ts start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "bun build src/index.ts --outdir dist --target node",
+    "build": "bun build src/index.ts --outdir dist --target node --external keytar",
     "prepack": "bun run build"
   },
   "dependencies": {
