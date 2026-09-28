@@ -21,7 +21,7 @@ Local surfaces:
 ```bash
 bun run dev:api        # http://localhost:4000
 bun run dev:web        # http://localhost:3100
-bun run dev:dashboard  # http://localhost:3001
+bun run dev:dashboard  # http://localhost:3101
 ```
 
 Build frontends with `bun run build:frontends`.
