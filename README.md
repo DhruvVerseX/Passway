@@ -138,7 +138,7 @@ passway run
 passway start -- node server.js
 ```
 
-After setup, `passway run` authenticates directly to the Passway runtime API over HTTPS, receives the authorized bundle in CLI memory, removes `PASSWAY_TOKEN` from the child process environment, and starts the saved command with the vault keys merged into `process.env`. The application can then read values normally:
+After setup, `passway run` authenticates directly to the Passway runtime API over HTTPS, creates a device-bound session, and fetches each vault value using the short-lived session token. If any fetch fails, the app does not start. The CLI removes `PASSWAY_TOKEN` and the session token from the child process environment and starts the saved command with the vault keys merged into `process.env`. The application can then read values normally:
 
 ```ts
 const databaseUrl = process.env.DB_URL;
@@ -146,6 +146,10 @@ const stripeKey = process.env.STRIPE_KEY;
 const jwtSecret = process.env.JWT_SECRET;
 ```
 
-The runtime bundle is not fetched by the dashboard or browser. The API response is marked `no-store`, the CLI does not print secret values, and the child process receives only the application secrets—not the Passway bearer token. Anyone who obtains the bearer token could still call the runtime endpoint, so protect the local `.env`, rotate compromised tokens immediately, and never commit `PASSWAY_TOKEN`, `.env`, or secret values.
+The dashboard and browser do not fetch runtime values. API responses are marked `no-store`, and the CLI does not save or print the fetched values. The values are still available to the running app and its dependencies in memory. A modified CLI or malicious dependency can copy them, and a leaked `PASSWAY_TOKEN` can authorize new sessions. Protect the local `.env`, rotate compromised tokens immediately, and never commit `PASSWAY_TOKEN`, `.env`, or secret values. The CLI warns when it cannot confirm that `.env` is ignored by Git. New runtime tokens expire after 30 days; a token permits up to three concurrent sessions.
+
+Startup fails closed: a missing value or failed connection prevents the app from starting. After startup, a lost revocation WebSocket leaves the app running with a warning because its environment values are already in memory. Revocation stops the official CLI's child process and blocks future server requests, but cannot erase values already copied by a modified client.
+
+Passway currently wraps stored secret keys with a master key provided in the API server's environment. This is an environment-backed KMS stand-in, not a hardware or managed KMS: compromise of the API process or its environment can expose the master key. HTTPS encrypts runtime responses in transit; extra response encryption would not prevent local plaintext exposure because the CLI must decrypt the values before launching the app.
 
 For a local Passway workspace, the API defaults to `http://localhost:4000`; for an installed CLI outside the workspace, it defaults to the production API unless `PASSWAY_API_URL` is set.

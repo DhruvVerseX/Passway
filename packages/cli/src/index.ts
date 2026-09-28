@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { spawn, type ChildProcess } from "node:child_process";
+import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeSecret, fetchRuntimeStatus, registerRuntimeDevice, type RuntimeSecrets } from "./api.js";
 import {
   apiBaseUrl,
@@ -30,6 +31,15 @@ import { connectRuntimeSessionSocket } from "./runtime-session.js";
 import { deviceLabel, getOrCreateRuntimeDeviceKey } from "./device.js";
 import { printPasswordManagerHelp } from "./password-manager.js";
 
+function warnIfDotenvIsTrackable() {
+  if (!existsSync(".env")) return;
+  try {
+    execFileSync("git", ["check-ignore", "-q", "--", ".env"], { stdio: "ignore" });
+  } catch {
+    printRuntimeWarning(".env is not confirmed gitignored. Keep PASSWAY_TOKEN out of commits.");
+  }
+}
+
 async function verifyRuntime(appId: string, token: string) {
   const baseUrl = apiBaseUrl();
   const result = await fetchRuntimeStatus(baseUrl, token, appId);
@@ -52,6 +62,7 @@ async function start(command?: string, args: string[] = []) {
     printInvalidToken();
     return 1;
   }
+  warnIfDotenvIsTrackable();
   const appId = await findAppId();
   if (!appId) {
     printMissingApp();
@@ -97,6 +108,7 @@ async function run() {
     printInvalidToken();
     return 1;
   }
+  warnIfDotenvIsTrackable();
 
   const baseUrl = apiBaseUrl();
   const status = await fetchRuntimeStatus(baseUrl, token, config.appId);

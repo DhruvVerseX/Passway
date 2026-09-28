@@ -9,6 +9,9 @@ import { consumeRuntimeDeviceSessionChallenge } from "./runtime-device.service.j
 
 export const RUNTIME_SESSION_TTL_MS = 15 * 60 * 1000;
 export const HEARTBEAT_TIMEOUT_MS = 45_000;
+const MAX_SESSIONS_PER_TOKEN = 3;
+
+export class RuntimeSessionLimitError extends Error {}
 
 export async function createRuntimeSession(
   projectId: string,
@@ -31,7 +34,15 @@ export async function createRuntimeSession(
   const now = new Date();
   const secretKeys = await getRuntimeSecretKeys(token.environmentId);
 
-  await db.transaction(async (tx) => {
+  const inserted = await db.transaction(async (tx) => {
+    const [currentToken] = await tx.select({ status: accessToken.status, revoked: accessToken.revoked, expiresAt: accessToken.expiresAt })
+      .from(accessToken).where(eq(accessToken.id, token.id)).for("update");
+    if (!currentToken || currentToken.status !== "active" || currentToken.revoked ||
+      (currentToken.expiresAt && currentToken.expiresAt.getTime() <= Date.now())) return false;
+    const active = await tx.select({ sessionId: runtimeSession.sessionId }).from(runtimeSession)
+      .where(and(eq(runtimeSession.accessTokenId, token.id), eq(runtimeSession.status, "active"), gt(runtimeSession.expiresAt, now)))
+      .limit(MAX_SESSIONS_PER_TOKEN);
+    if (active.length >= MAX_SESSIONS_PER_TOKEN) throw new RuntimeSessionLimitError("Too many active sessions");
     await tx.insert(runtimeSession).values({
       sessionId,
       environmentId: token.environmentId,
@@ -53,7 +64,9 @@ export async function createRuntimeSession(
       ip,
       action: "RUNTIME_SESSION_CREATED",
     }));
+    return true;
   });
+  if (!inserted) return undefined;
   touchRuntimeToken(token.id);
   return { sessionId, sessionToken, secretKeys };
 }

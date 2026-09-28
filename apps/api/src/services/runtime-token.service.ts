@@ -15,6 +15,8 @@ import { auditValues } from "./audit.service.js";
 import { getOwnedEnvironment } from "./environment-access.js";
 import { auditLog } from "../db/auth-schema.js";
 
+export const RUNTIME_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 export async function authenticateRuntimeToken(token: string) {
   if (!looksLikePasswayToken(token)) return undefined;
 
@@ -141,6 +143,7 @@ export async function rotateRuntimeToken(
       label: "Rotated runtime token",
       status: "active",
       revoked: false,
+      expiresAt: new Date(now.getTime() + RUNTIME_TOKEN_TTL_MS),
       createdByUserId: userId,
       createdAt: now,
     });

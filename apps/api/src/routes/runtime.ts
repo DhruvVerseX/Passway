@@ -16,6 +16,7 @@ import {
 import {
   authenticateRuntimeSession,
   createRuntimeSession,
+  RuntimeSessionLimitError,
   revokeRuntimeSession,
 } from "../services/runtime-session.service.js";
 import {
@@ -58,7 +59,8 @@ runtimeRouter.post("/runtime/sessions", requireRuntimeToken, async (req, res) =>
       "X-Content-Type-Options": "nosniff",
     });
     return res.status(201).json(session);
-  } catch {
+  } catch (error) {
+    if (error instanceof RuntimeSessionLimitError) return res.status(429).json({ error: "Too many active sessions" });
     return res.status(500).json({ error: "Secret unavailable" });
   }
 });

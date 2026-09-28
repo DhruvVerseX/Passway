@@ -7,6 +7,7 @@ describe("runtime child environment", () => {
       {
         PATH: "/usr/bin",
         PASSWAY_TOKEN: "ps_live_token",
+        PASSWAY_SESSION_TOKEN: "ps_live_session",
         EXISTING_VALUE: "kept",
       },
       { DB_URL: "postgres://private", EXISTING_VALUE: "from-vault" },
@@ -18,7 +19,7 @@ describe("runtime child environment", () => {
       DB_URL: "postgres://private",
     });
     expect(environment.PASSWAY_TOKEN).toBeUndefined();
-    expect(environment).not.toHaveProperty("sessionToken");
+    expect(environment.PASSWAY_SESSION_TOKEN).toBeUndefined();
   });
 
   it("uses Windows command shims for package managers", () => {

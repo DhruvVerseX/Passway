@@ -5,6 +5,7 @@ import { accessToken, auditLog, environment } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { auditValues } from "./audit.service.js";
 import { getOwnedEnvironment } from "./environment-access.js";
+import { RUNTIME_TOKEN_TTL_MS } from "./runtime-token.service.js";
 
 export class EnvironmentHostingError extends Error {
   constructor(readonly code: "NOT_FOUND" | "ALREADY_HOSTED" | "NOT_ELIGIBLE") {
@@ -54,6 +55,7 @@ export async function hostEnvironment(
       label: "Initial runtime token",
       status: "active",
       revoked: false,
+      expiresAt: new Date(now.getTime() + RUNTIME_TOKEN_TTL_MS),
       createdByUserId: userId,
       createdAt: now,
     });

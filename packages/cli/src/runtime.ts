@@ -8,6 +8,8 @@ export function childEnvironment(
 ): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = { ...parent, ...secrets };
   delete environment.PASSWAY_TOKEN;
+  delete environment.PASSWAY_SESSION_TOKEN;
+  delete environment.PASSWAY_SESSION_TOKEN;
   return environment;
 }
 
