@@ -11,7 +11,7 @@ export function webBaseURL() {
 }
 
 export function dashboardBaseURL() {
-  return process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001";
+  return process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3101";
 }
 
 export function normalizeEmail(email: string) {

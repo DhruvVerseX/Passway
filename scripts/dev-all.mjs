@@ -4,7 +4,7 @@ import { createInterface } from "node:readline";
 const services = [
   { name: "api", cwd: "apps/api", url: "http://localhost:4000" },
   { name: "web", cwd: "apps/web", url: "http://localhost:3100" },
-  { name: "dashboard", cwd: "apps/dashboard", url: "http://localhost:3001" },
+  { name: "dashboard", cwd: "apps/dashboard", url: "http://localhost:3101" },
 ];
 
 const command = process.platform === "win32" ? "bun.exe" : "bun";

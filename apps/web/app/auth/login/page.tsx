@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Github, LockKeyhole, Mail, R
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
-const dashboardBase = process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001";
+const dashboardBase = process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3101";
 const dashboardHome = `${dashboardBase}/dashboard`;
 
 function callbackURL() {

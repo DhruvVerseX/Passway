@@ -10,7 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
-const dashboardHome = `${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3001"}/dashboard`;
+const dashboardHome = `${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3101"}/dashboard`;
 
 function safeCallbackURL(value: string | null) {
   try {
