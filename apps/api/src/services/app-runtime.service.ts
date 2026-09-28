@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { accessToken, auditLog, environment } from "../db/auth-schema.js";
+import { accessToken, auditLog, environment, runtimeSession } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { auditValues } from "./audit.service.js";
 import { getOwnedEnvironment } from "./environment-access.js";
@@ -70,6 +70,9 @@ export async function disableAppRuntime(appId: string, userId: string, ip: strin
         .set({ status: "revoked", revoked: true, revokedAt: now })
         .where(and(eq(accessToken.environmentId, appId), eq(accessToken.status, "active")));
     }
+    const sessions = await tx.update(runtimeSession).set({ status: "revoked" })
+      .where(and(eq(runtimeSession.environmentId, appId), eq(runtimeSession.status, "active")))
+      .returning({ sessionId: runtimeSession.sessionId });
     await tx.insert(auditLog).values([
       auditValues({
         environmentId: appId,
@@ -90,10 +93,18 @@ export async function disableAppRuntime(appId: string, userId: string, ip: strin
           action: "RUNTIME_TOKEN_REVOKED",
         }),
       ),
+      ...sessions.map(() => auditValues({
+        environmentId: appId,
+        projectId: owned.projectId,
+        workspaceId: owned.workspaceId,
+        actorUserId: userId,
+        ip,
+        action: "RUNTIME_SESSION_REVOKED",
+      })),
     ]);
-    return disabled;
+    return { disabled, sessionIds: sessions.map((session) => session.sessionId) };
   });
-  return record && { id: record.id, name: record.name, runtimeStatus: "disabled" as const, disabledAt: record.disabledAt };
+  return record && { id: record.disabled.id, name: record.disabled.name, runtimeStatus: "disabled" as const, disabledAt: record.disabled.disabledAt, sessionIds: record.sessionIds };
 }
 
 export function recordAppHealth(appId: string, healthy: boolean, at = new Date()) {

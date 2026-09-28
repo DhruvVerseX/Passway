@@ -46,7 +46,9 @@ environmentsRouter.post("/apps/:appId/disable-runtime", requireAuth, requireRece
   try {
     const disabled = await disableAppRuntime(req.params.appId, req.passwayUser!.id, req.ip ?? "unknown");
     if (!disabled) return res.status(409).json({ error: "Vault runtime is not hosted" });
-    return res.json(disabled);
+    disabled.sessionIds.forEach(pushRuntimeSessionRevoke);
+    const { sessionIds: _sessionIds, ...response } = disabled;
+    return res.json(response);
   } catch (error) {
     const response = appRuntimeError(error, res);
     if (response) return response;

@@ -81,13 +81,17 @@ describe("App runtime hosting", () => {
 
   it("revokes active runtime tokens when disabling the App", async () => {
     mocks.getOwnedEnvironment.mockResolvedValue({ ...owned, runtimeEnabled: true });
-    mocks.returning.mockResolvedValueOnce([{ id: "app-a", name: "Backend", disabledAt: new Date("2026-08-23T12:00:00Z") }]);
+    mocks.returning
+      .mockResolvedValueOnce([{ id: "app-a", name: "Backend", disabledAt: new Date("2026-08-23T12:00:00Z") }])
+      .mockResolvedValueOnce([{ sessionId: "sess-a" }]);
 
-    await expect(disableAppRuntime("app-a", "owner-a", "127.0.0.1")).resolves.toMatchObject({ runtimeStatus: "disabled" });
+    await expect(disableAppRuntime("app-a", "owner-a", "127.0.0.1")).resolves.toMatchObject({ runtimeStatus: "disabled", sessionIds: ["sess-a"] });
     expect(mocks.set.mock.calls.some(([value]) => value.status === "revoked" && value.revoked === true)).toBe(true);
+    expect(mocks.set.mock.calls.some(([value]) => value.status === "revoked" && value.revoked === undefined)).toBe(true);
     expect(mocks.values.mock.calls[0][0].map((entry: { action: string }) => entry.action)).toEqual([
       "APP_RUNTIME_DISABLED",
       "RUNTIME_TOKEN_REVOKED",
+      "RUNTIME_SESSION_REVOKED",
     ]);
   });
 });

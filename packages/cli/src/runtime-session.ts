@@ -28,6 +28,11 @@ export async function connectRuntimeSessionSocket(input: {
   let heartbeat: ReturnType<typeof setInterval> | undefined;
   let warned = false;
   let retry = 0;
+  const revoke = () => {
+    if (closed) return;
+    closed = true;
+    input.onRevoke();
+  };
 
   const connect = () =>
     new Promise<void>((resolve, reject) => {
@@ -53,7 +58,7 @@ export async function connectRuntimeSessionSocket(input: {
         try {
           const text = typeof data === "string" ? data : data.toString();
           const message = JSON.parse(text) as { type?: unknown };
-          if (message.type === "revoke") input.onRevoke();
+          if (message.type === "revoke") revoke();
         } catch {
           // Ignore malformed server messages; only an explicit revoke stops the child.
         }
@@ -61,9 +66,10 @@ export async function connectRuntimeSessionSocket(input: {
       next.once("error", () => {
         if (!opened) reject(new Error("runtime websocket failed"));
       });
-      next.once("close", () => {
+      next.once("close", (code) => {
         if (heartbeat) clearInterval(heartbeat);
         heartbeat = undefined;
+        if (code === 4001) revoke();
         if (!closed && opened) void reconnect();
       });
     });
