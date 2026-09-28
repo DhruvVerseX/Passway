@@ -43,6 +43,18 @@ function warnIfDotenvIsTrackable() {
   }
 }
 
+function stopRuntimeChild(child: ChildProcess | undefined) {
+  if (!child || child.exitCode !== null) return;
+  if (process.platform === "win32" && child.pid) {
+    const stop = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+    stop.once("error", () => child.kill());
+    stop.once("exit", (code) => { if (code !== 0) child.kill(); });
+    return;
+  }
+  child.kill("SIGTERM");
+  setTimeout(() => { if (child.exitCode === null) child.kill("SIGKILL"); }, 5_000).unref();
+}
+
 async function verifyRuntime(appId: string, token: string) {
   const baseUrl = apiBaseUrl();
   const result = await fetchRuntimeStatus(baseUrl, token, appId);
@@ -167,8 +179,7 @@ async function run() {
     onRevoke: () => {
       revoked = true;
       printRuntimeRevoked();
-      child?.kill("SIGTERM");
-      setTimeout(() => child?.kill("SIGKILL"), 5_000).unref();
+      stopRuntimeChild(child);
     },
     });
   } catch {
