@@ -6,3 +6,4 @@ backend.log
 context.txt
 apps/*/.next/
 apps/*/tsconfig.tsbuildinfo
+.tmp/

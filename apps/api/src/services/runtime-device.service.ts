@@ -25,6 +25,13 @@ function validSignature(value: string) {
   return /^[A-Za-z0-9_-]{80,256}$/.test(value);
 }
 
+function isMissingRuntimeDeviceTable(error: unknown) {
+  const cause = typeof error === "object" && error !== null && "cause" in error
+    ? error.cause
+    : error;
+  return typeof cause === "object" && cause !== null && "code" in cause && cause.code === "42P01";
+}
+
 function canUseToken(token: TokenScope): token is RuntimeToken {
   return Boolean(token && token.createdByUserId && token.environmentStatus === "hosted" && token.runtimeEnabled);
 }
@@ -189,13 +196,18 @@ export async function consumeRuntimeDeviceSessionChallenge(
 }
 
 export async function listRuntimeDevices(environmentId: string, userId: string) {
-  return db.select({
-    id: runtimeDevice.id,
-    label: runtimeDevice.label,
-    status: runtimeDevice.status,
-    createdAt: runtimeDevice.createdAt,
-    lastUsedAt: runtimeDevice.lastUsedAt,
-  }).from(runtimeDevice).where(and(eq(runtimeDevice.environmentId, environmentId), eq(runtimeDevice.userId, userId)));
+  try {
+    return await db.select({
+      id: runtimeDevice.id,
+      label: runtimeDevice.label,
+      status: runtimeDevice.status,
+      createdAt: runtimeDevice.createdAt,
+      lastUsedAt: runtimeDevice.lastUsedAt,
+    }).from(runtimeDevice).where(and(eq(runtimeDevice.environmentId, environmentId), eq(runtimeDevice.userId, userId)));
+  } catch (error) {
+    if (isMissingRuntimeDeviceTable(error)) return [];
+    throw error;
+  }
 }
 
 export async function revokeRuntimeDevice(environmentId: string, deviceId: string, userId: string, ip: string) {

@@ -1,4 +1,5 @@
 import { apiBaseURL, signInURL } from "./auth-ui";
+import { authClient } from "./auth-client";
 
 export type ApiProject = {
   id: string;
@@ -113,7 +114,11 @@ async function request<T>(path: string, init: RequestInit = {}) {
       message.toLowerCase().includes("re-authentication") &&
       typeof window !== "undefined"
     ) {
-      window.location.assign(signInURL(window.location.href));
+      try {
+        await authClient.signOut();
+      } finally {
+        window.location.replace(signInURL(window.location.href));
+      }
     }
     throw new PasswayApiError(message, response.status, body);
   }

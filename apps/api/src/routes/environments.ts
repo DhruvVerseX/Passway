@@ -32,7 +32,7 @@ function appRuntimeError(error: unknown, res: Parameters<Parameters<typeof envir
   return res.status(409).json({ error: "Vault runtime is already hosted" });
 }
 
-environmentsRouter.post("/apps/:appId/host", requireAuth, requireRecentAuth, async (req, res) => {
+environmentsRouter.post("/apps/:appId/host", requireAuth, async (req, res) => {
   try {
     return res.status(201).json(await hostAppRuntime(req.params.appId, req.passwayUser!.id, req.ip ?? "unknown"));
   } catch (error) {
@@ -97,7 +97,6 @@ environmentsRouter.post(
 environmentsRouter.post(
   "/environments/:environmentId/host",
   requireAuth,
-  requireRecentAuth,
   async (req, res) => {
     try {
       const hosted = await hostEnvironment(
