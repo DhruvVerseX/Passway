@@ -80,6 +80,10 @@ describe("versioned secret envelope", () => {
 
     const rotated = await rotateSecret(original, "v2");
     expect(rotated.keyVersion).toBe("v2");
+    expect(rotated.ciphertext).toBe(original.ciphertext);
+    expect(rotated.iv).toBe(original.iv);
+    expect(rotated.authTag).toBe(original.authTag);
+    expect(rotated.wrappedDataKey).not.toBe(original.wrappedDataKey);
     await expect(decryptSecret(rotated)).resolves.toBe("rotation compatible");
   });
 

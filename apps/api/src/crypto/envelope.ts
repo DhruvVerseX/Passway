@@ -140,6 +140,12 @@ export async function rotateSecret(
   payload: EncryptedSecret,
   newKeyVersion: string
 ): Promise<EncryptedSecret> {
-  const plaintext = await decryptSecret(payload);
-  return encryptSecret(plaintext, newKeyVersion);
+  const validated = validateEncryptedSecret(payload);
+  const dataKey = await kms.unwrap(validated.wrappedDataKey, validated.keyVersion);
+  try {
+    const wrappedDataKey = await kms.wrap(dataKey, newKeyVersion);
+    return { ...validated, keyVersion: newKeyVersion, wrappedDataKey };
+  } finally {
+    dataKey.fill(0);
+  }
 }

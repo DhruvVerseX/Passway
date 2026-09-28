@@ -152,6 +152,10 @@ Startup fails closed: a missing value or failed live connection prevents the app
 
 Passway currently wraps stored secret keys with a master key provided in the API server's environment. This is an environment-backed KMS stand-in, not a hardware or managed KMS: compromise of the API process or its environment can expose the master key. HTTPS encrypts runtime responses in transit; extra response encryption would not prevent local plaintext exposure because the CLI must decrypt the values before launching the app.
 
-The API code does not log runtime request or response bodies. Configure hosting and proxy request logs to omit authorization headers, token URLs, and runtime response bodies. The in-process runtime rate limiter is per API instance; a shared limiter is needed if API traffic is spread across multiple instances.
+The CLI rejects remote HTTP API URLs. Production API requests redirect to the configured HTTPS origin and send HSTS. Set `BETTER_AUTH_URL` to the public HTTPS API origin and `PASSWAY_TRUST_PROXY_HOPS` to the exact number of trusted TLS proxy hops (zero for direct HTTPS). Runtime request limits use the shared Postgres `rateLimit` table, so every API instance must use the same database.
+
+To rotate the environment-backed master key, keep the old version in `PASSWAY_MASTER_KEYS`, add a fresh 32-byte key under a new version, set `PASSWAY_ACTIVE_KEY_VERSION` to that version, and run `bun run --cwd apps/api keys:rotate`. The command rewraps stored data keys without reading secret plaintext. Back up the database and old keys first. Keep old keys until every stored row has the new version and a restore has been tested. A managed KMS remains the next storage-security milestone; the master keys currently reside in the API process environment.
+
+Before deploying, fetch a unique canary secret through the CLI and search API, proxy, and hosting provider logs for the canary, runtime token, and session token. Confirm none appear in URLs, query strings, headers, or response-body logs. Passway has no hosted deployment yet, so this provider log check has not been run. The local canary test checks CLI request URLs and output only.
 
 For a local Passway workspace, the API defaults to `http://localhost:4000`; for an installed CLI outside the workspace, it defaults to the production API unless `PASSWAY_API_URL` is set.

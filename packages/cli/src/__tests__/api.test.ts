@@ -9,6 +9,27 @@ afterEach(() => {
 });
 
 describe("runtime sessions API", () => {
+  it("keeps a canary value and both tokens out of request URLs and CLI logs", async () => {
+    const canary = "CANARY_abc123";
+    const session = { sessionId: "sess_a", sessionToken: `ps_live_${"b".repeat(43)}`, secretKeys: ["DB_URL"] };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ value: canary })));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      await expect(fetchRuntimeSecret("https://api.passway.co.in", session, "DB_URL")).resolves.toBe(canary);
+      const url = String(fetchMock.mock.calls[0][0]);
+      expect(url).not.toContain(canary);
+      expect(url).not.toContain(token);
+      expect(url).not.toContain(session.sessionToken);
+      expect(fetchMock.mock.calls[0][1].headers.authorization).toBe(`Bearer ${session.sessionToken}`);
+      expect(JSON.stringify([log.mock.calls, warn.mock.calls, error.mock.calls])).not.toContain(canary);
+    } finally {
+      log.mockRestore(); warn.mockRestore(); error.mockRestore();
+    }
+  });
+
   it("creates a scoped runtime session without logging the response", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

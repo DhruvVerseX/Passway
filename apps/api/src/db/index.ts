@@ -17,4 +17,5 @@ pool.on("error", () => {
 });
 
 export const db = drizzle({ client: pool, schema: authSchema });
+export const closeDatabase = () => pool.end();
 export { authSchema };

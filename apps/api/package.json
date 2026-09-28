@@ -9,6 +9,7 @@
         "typecheck": "tsc --noEmit",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
+        "keys:rotate": "tsx --env-file=.env src/scripts/rotate-keys.ts",
         "test": "vitest run"
     },
     "dependencies": {
