@@ -6,6 +6,7 @@ import { pushRuntimeSessionRevoke } from "../runtime-websocket.js";
 import { writeAudit } from "../services/audit.service.js";
 import { recordAppHealth } from "../services/app-runtime.service.js";
 import {
+  getRuntimeSecret,
   verifyRuntimeSecretBundle,
 } from "../services/runtime-secret.service.js";
 import {
@@ -13,6 +14,7 @@ import {
   touchRuntimeToken,
 } from "../services/runtime-token.service.js";
 import {
+  authenticateRuntimeSession,
   createRuntimeSession,
   revokeRuntimeSession,
 } from "../services/runtime-session.service.js";
@@ -56,6 +58,23 @@ runtimeRouter.post("/runtime/sessions", requireRuntimeToken, async (req, res) =>
       "X-Content-Type-Options": "nosniff",
     });
     return res.status(201).json(session);
+  } catch {
+    return res.status(500).json({ error: "Secret unavailable" });
+  }
+});
+
+runtimeRouter.get("/runtime/sessions/:sessionId/secrets/:key", requireRuntimeToken, async (req, res) => {
+  res.locals.passwayDisableBodyLogging = true;
+  res.set({ "Cache-Control": "no-store, no-cache, must-revalidate, private", Pragma: "no-cache", "X-Content-Type-Options": "nosniff" });
+  const { sessionId, key } = req.params;
+  if (!sessionId?.startsWith("sess_") || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key ?? "")) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  try {
+    const session = await authenticateRuntimeSession(sessionId, req.runtimeToken!);
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    const value = await getRuntimeSecret(session.environmentId, key);
+    return value === undefined ? res.status(404).json({ error: "Not found" }) : res.json({ value });
   } catch {
     return res.status(500).json({ error: "Secret unavailable" });
   }

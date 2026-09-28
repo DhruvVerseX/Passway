@@ -5,10 +5,11 @@ const mocks = vi.hoisted(() => ({
   authenticateRuntimeToken: vi.fn(),
   touchRuntimeToken: vi.fn(),
   verifyRuntimeSecretBundle: vi.fn(),
-  getRuntimeSecretBundle: vi.fn(),
+  getRuntimeSecret: vi.fn(),
   recordAppHealth: vi.fn(),
   writeAudit: vi.fn(),
   createRuntimeSession: vi.fn(),
+  authenticateRuntimeSession: vi.fn(),
   revokeRuntimeSession: vi.fn(),
   beginRuntimeDeviceChallenge: vi.fn(),
   beginRuntimeDeviceRegistration: vi.fn(),
@@ -22,7 +23,7 @@ vi.mock("../../services/runtime-token.service.js", () => ({
 }));
 vi.mock("../../services/runtime-secret.service.js", () => ({
   verifyRuntimeSecretBundle: mocks.verifyRuntimeSecretBundle,
-  getRuntimeSecretBundle: mocks.getRuntimeSecretBundle,
+  getRuntimeSecret: mocks.getRuntimeSecret,
 }));
 vi.mock("../../services/app-runtime.service.js", () => ({
   recordAppHealth: mocks.recordAppHealth,
@@ -32,6 +33,7 @@ vi.mock("../../services/audit.service.js", () => ({
 }));
 vi.mock("../../services/runtime-session.service.js", () => ({
   createRuntimeSession: mocks.createRuntimeSession,
+  authenticateRuntimeSession: mocks.authenticateRuntimeSession,
   revokeRuntimeSession: mocks.revokeRuntimeSession,
 }));
 vi.mock("../../services/runtime-device.service.js", () => ({
@@ -83,6 +85,21 @@ async function createSession(body: unknown = { projectId: "env-a", challengeId: 
   }
 }
 
+async function fetchSecret(sessionToken = token) {
+  const { runtimeRouter } = await import("../runtime.js");
+  const app = express().use("/api", runtimeRouter);
+  const server = app.listen(0);
+  try {
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("No test port");
+    return await fetch(`http://127.0.0.1:${address.port}/api/runtime/sessions/sess_a/secrets/DATABASE_URL`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+  } finally {
+    server.close();
+  }
+}
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -111,14 +128,14 @@ describe("runtime sessions", () => {
     mocks.createRuntimeSession.mockResolvedValue({
       sessionId: "sess_a",
       sessionToken: `ps_live_${"b".repeat(43)}`,
-      secrets: { DATABASE_URL: "postgres://private" },
+      secretKeys: ["DATABASE_URL"],
     });
 
     const response = await createSession();
 
     await expect(response.json()).resolves.toMatchObject({
       sessionId: "sess_a",
-      secrets: { DATABASE_URL: "postgres://private" },
+      secretKeys: ["DATABASE_URL"],
     });
     expect(response.status).toBe(201);
     expect(mocks.createRuntimeSession).toHaveBeenCalledWith(
@@ -127,5 +144,18 @@ describe("runtime sessions", () => {
       expect.any(String),
       { challengeId: "dch_a", signature: "a".repeat(86) },
     );
+  });
+
+  it("rechecks the session before each secret fetch", async () => {
+    mocks.authenticateRuntimeSession.mockResolvedValueOnce({ environmentId: "env-a" }).mockResolvedValueOnce(undefined);
+    mocks.getRuntimeSecret.mockResolvedValue("postgres://private");
+    const first = await fetchSecret();
+    expect(first.status).toBe(200);
+    expect(first.headers.get("cache-control")).toContain("no-store");
+    await expect(first.json()).resolves.toEqual({ value: "postgres://private" });
+    const revoked = await fetchSecret();
+    expect(revoked.status).toBe(401);
+    expect(mocks.getRuntimeSecret).toHaveBeenCalledTimes(1);
+    expect(mocks.authenticateRuntimeSession).toHaveBeenCalledWith("sess_a", token);
   });
 });

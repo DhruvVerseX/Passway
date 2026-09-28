@@ -18,6 +18,7 @@ describe("runtime child environment", () => {
       DB_URL: "postgres://private",
     });
     expect(environment.PASSWAY_TOKEN).toBeUndefined();
+    expect(environment).not.toHaveProperty("sessionToken");
   });
 
   it("uses Windows command shims for package managers", () => {

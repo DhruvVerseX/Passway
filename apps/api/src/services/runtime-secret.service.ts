@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { decryptSecret, type EncryptedSecret } from "../crypto/envelope.js";
 import { secret } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
@@ -42,12 +42,23 @@ function payload(record: EncryptedRecord): EncryptedSecret {
   };
 }
 
-export async function getRuntimeSecretBundle(environmentId: string) {
-  const records = await encryptedRecords(environmentId);
-  const values = await Promise.all(
-    records.map(async (record) => [record.key, await decryptSecret(payload(record))])
-  );
-  return Object.fromEntries(values);
+export async function getRuntimeSecretKeys(environmentId: string) {
+  const records = await db.select({ key: secret.key }).from(secret).where(eq(secret.environmentId, environmentId));
+  return records.map((record) => record.key);
+}
+
+export async function getRuntimeSecret(environmentId: string, key: string) {
+  const [record] = await db.select({
+    key: secret.key,
+    payloadVersion: secret.payloadVersion,
+    keyVersion: secret.keyVersion,
+    algorithm: secret.algorithm,
+    ciphertext: secret.ciphertext,
+    iv: secret.iv,
+    authTag: secret.authTag,
+    wrappedDataKey: secret.wrappedDataKey,
+  }).from(secret).where(and(eq(secret.environmentId, environmentId), eq(secret.key, key))).limit(1);
+  return record ? decryptSecret(payload(record)) : undefined;
 }
 
 export async function verifyRuntimeSecretBundle(environmentId: string) {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createRuntimeSession, fetchRuntimeStatus } from "../api.js";
+import { createRuntimeSession, fetchRuntimeSecret, fetchRuntimeStatus } from "../api.js";
 
 const token = `ps_live_${"a".repeat(43)}`;
 
@@ -15,7 +15,7 @@ describe("runtime sessions API", () => {
         JSON.stringify({
           sessionId: "sess_a",
           sessionToken: `ps_live_${"b".repeat(43)}`,
-          secrets: { DB_URL: "postgres://private" },
+          secretKeys: ["DB_URL"],
         }),
         { status: 201 },
       ),
@@ -26,7 +26,7 @@ describe("runtime sessions API", () => {
       createRuntimeSession("https://api.passway.co.in", token, "environment-id", { challengeId: "dch_a", signature: "a".repeat(86) }),
     ).resolves.toMatchObject({
       kind: "success",
-      session: { sessionId: "sess_a", secrets: { DB_URL: "postgres://private" } },
+      session: { sessionId: "sess_a", secretKeys: ["DB_URL"] },
     });
     expect(fetchMock.mock.calls[0][0]).toBe(
       "https://api.passway.co.in/api/runtime/sessions",
@@ -34,6 +34,21 @@ describe("runtime sessions API", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
       projectId: "environment-id", challengeId: "dch_a", signature: "a".repeat(86),
     });
+  });
+
+  it("fetches one value with the session token", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ value: "postgres://private" })));
+    vi.stubGlobal("fetch", fetchMock);
+    const session = { sessionId: "sess_a", sessionToken: `ps_live_${"b".repeat(43)}`, secretKeys: ["DB_URL"] };
+    await expect(fetchRuntimeSecret("https://api.passway.co.in", session, "DB_URL")).resolves.toBe("postgres://private");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.passway.co.in/api/runtime/sessions/sess_a/secrets/DB_URL");
+    expect(fetchMock.mock.calls[0][1].headers.authorization).toBe(`Bearer ${session.sessionToken}`);
+    expect(fetchMock.mock.calls[0][1].headers.authorization).not.toContain(token);
+  });
+
+  it("does not treat a failed fetch as an empty secret", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+    await expect(fetchRuntimeSecret("https://api.passway.co.in", { sessionId: "sess_a", sessionToken: token, secretKeys: ["DB_URL"] }, "DB_URL")).resolves.toBeUndefined();
   });
 });
 

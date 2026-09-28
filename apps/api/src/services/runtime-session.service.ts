@@ -1,9 +1,9 @@
 import { and, eq, gt, lt } from "drizzle-orm";
 import { generateToken, hashToken, looksLikePasswayToken } from "../crypto/tokens.js";
-import { auditLog, runtimeSession, workspace } from "../db/auth-schema.js";
+import { accessToken, auditLog, environment, runtimeDevice, runtimeSession, workspace } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { auditValues } from "./audit.service.js";
-import { getRuntimeSecretBundle } from "./runtime-secret.service.js";
+import { getRuntimeSecretKeys } from "./runtime-secret.service.js";
 import { authenticateRuntimeToken, touchRuntimeToken } from "./runtime-token.service.js";
 import { consumeRuntimeDeviceSessionChallenge } from "./runtime-device.service.js";
 
@@ -29,7 +29,7 @@ export async function createRuntimeSession(
   const sessionId = `sess_${crypto.randomUUID()}`;
   const sessionToken = generateToken();
   const now = new Date();
-  const secrets = await getRuntimeSecretBundle(token.environmentId);
+  const secretKeys = await getRuntimeSecretKeys(token.environmentId);
 
   await db.transaction(async (tx) => {
     await tx.insert(runtimeSession).values({
@@ -55,7 +55,7 @@ export async function createRuntimeSession(
     }));
   });
   touchRuntimeToken(token.id);
-  return { sessionId, sessionToken, secrets };
+  return { sessionId, sessionToken, secretKeys };
 }
 
 export async function authenticateRuntimeSession(sessionId: string, sessionToken: string) {
@@ -69,15 +69,26 @@ export async function authenticateRuntimeSession(sessionId: string, sessionToken
       accessTokenId: runtimeSession.accessTokenId,
       status: runtimeSession.status,
       expiresAt: runtimeSession.expiresAt,
+      tokenStatus: accessToken.status,
+      tokenRevoked: accessToken.revoked,
+      tokenExpiresAt: accessToken.expiresAt,
+      deviceStatus: runtimeDevice.status,
+      environmentStatus: environment.status,
+      runtimeEnabled: environment.runtimeEnabled,
     })
     .from(runtimeSession)
+    .innerJoin(accessToken, eq(runtimeSession.accessTokenId, accessToken.id))
+    .innerJoin(runtimeDevice, eq(runtimeSession.deviceId, runtimeDevice.id))
+    .innerJoin(environment, eq(runtimeSession.environmentId, environment.id))
     .where(and(
       eq(runtimeSession.sessionId, sessionId),
       eq(runtimeSession.sessionTokenHash, hashToken(sessionToken)),
     ))
     .limit(1);
 
-  if (!session || session.status !== "active") return undefined;
+  if (!session || session.status !== "active" || session.tokenStatus !== "active" ||
+    session.tokenRevoked || (session.tokenExpiresAt && session.tokenExpiresAt.getTime() <= Date.now()) ||
+    session.deviceStatus !== "active" || session.environmentStatus !== "hosted" || !session.runtimeEnabled) return undefined;
   if (session.expiresAt.getTime() <= Date.now()) {
     await db
       .update(runtimeSession)

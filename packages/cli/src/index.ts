@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn, type ChildProcess } from "node:child_process";
-import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeStatus, registerRuntimeDevice } from "./api.js";
+import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeSecret, fetchRuntimeStatus, registerRuntimeDevice, type RuntimeSecrets } from "./api.js";
 import {
   apiBaseUrl,
   detectLaunchCommand,
@@ -118,15 +118,24 @@ async function run() {
     return 1;
   }
 
+  const secrets: RuntimeSecrets = Object.create(null);
+  for (const key of session.session.secretKeys) {
+    const value = await fetchRuntimeSecret(baseUrl, session.session, key);
+    if (value === undefined) {
+      for (const loadedKey of Object.keys(secrets)) delete secrets[loadedKey];
+      printSecretFailure({ kind: "server" });
+      return 1;
+    }
+    secrets[key] = value;
+  }
+
   printRunReady(status.status, config.launchCommand);
   const [command, ...args] = config.launchCommand;
   let child: ChildProcess | undefined;
   let revoked = false;
-  let secrets: typeof session.session.secrets | undefined = session.session.secrets;
   const redactions = secretValues(secrets);
   const childEnv = childEnvironment(process.env, secrets);
-  session.session.secrets = {};
-  secrets = undefined;
+  for (const key of Object.keys(secrets)) delete secrets[key];
   const socket = await connectRuntimeSessionSocket({
     apiBaseUrl: baseUrl,
     sessionId: session.session.sessionId,

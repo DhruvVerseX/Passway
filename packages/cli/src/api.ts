@@ -32,24 +32,10 @@ export type RuntimeSecrets = Record<string, string>;
 export interface RuntimeSession {
   sessionId: string;
   sessionToken: string;
-  secrets: RuntimeSecrets;
+  secretKeys: string[];
 }
 
 export interface RuntimeDeviceChallenge { challengeId: string; challenge: string }
-
-type SecretsResult =
-  | { kind: "success"; secrets: RuntimeSecrets }
-  | {
-      kind:
-        | "auth"
-        | "not_hosted"
-        | "app_disabled"
-        | "unhealthy"
-        | "rate_limit"
-        | "server"
-        | "network"
-        | "timeout";
-    };
 
 type SessionResult =
   | { kind: "success"; session: RuntimeSession }
@@ -64,14 +50,6 @@ type SessionResult =
         | "network"
         | "timeout";
     };
-
-function isRuntimeSecrets(value: unknown): value is RuntimeSecrets {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  return Object.entries(value).every(
-    ([key, secret]) =>
-      /^[A-Za-z_][A-Za-z0-9_]*$/.test(key) && typeof secret === "string",
-  );
-}
 
 function isRuntimeStatus(value: unknown): value is RuntimeStatus {
   if (!value || typeof value !== "object") return false;
@@ -102,8 +80,30 @@ function isRuntimeSession(value: unknown): value is RuntimeSession {
     typeof response.sessionId === "string" &&
     response.sessionId.startsWith("sess_") &&
     typeof response.sessionToken === "string" &&
-    isRuntimeSecrets(response.secrets)
+    Array.isArray(response.secretKeys) &&
+    response.secretKeys.every((key) => typeof key === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) &&
+    new Set(response.secretKeys).size === response.secretKeys.length
   );
+}
+
+export async function fetchRuntimeSecret(apiBaseUrl: string, session: RuntimeSession, key: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/runtime/sessions/${encodeURIComponent(session.sessionId)}/secrets/${encodeURIComponent(key)}`, {
+      headers: { authorization: `Bearer ${session.sessionToken}` },
+      signal: controller.signal,
+    });
+    if (!response.ok) return undefined;
+    const body: unknown = await response.json();
+    return body && typeof body === "object" && typeof (body as { value?: unknown }).value === "string"
+      ? (body as { value: string }).value
+      : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function isRuntimeDeviceChallenge(value: unknown): value is RuntimeDeviceChallenge {
