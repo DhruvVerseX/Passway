@@ -59,3 +59,8 @@ export function sendVerificationEmail(to: string, url: string) {
 export function sendResetPasswordEmail(to: string, url: string) {
   return deliver({ to, ...resetPasswordEmail(url) });
 }
+
+export function sendRuntimeNewIpEmail(to: string, environmentName: string, ip: string) {
+  const text = `A Passway runtime session started for ${environmentName} from a new IP address: ${ip}. If this was not you, revoke the runtime token and device in Passway.`;
+  return sendResendEmail({ to, subject: "New Passway runtime IP address", text, html: `<p>${text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!)}</p>` });
+}

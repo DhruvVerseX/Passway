@@ -85,11 +85,7 @@ export async function connectRuntimeSessionSocket(input: {
     }
   };
 
-  try {
-    await connect();
-  } catch {
-    void reconnect();
-  }
+  await connect();
 
   return {
     close() {

@@ -106,6 +106,19 @@ export async function fetchRuntimeSecret(apiBaseUrl: string, session: RuntimeSes
   }
 }
 
+export async function fetchRuntimeSecrets(apiBaseUrl: string, session: RuntimeSession): Promise<RuntimeSecrets | undefined> {
+  const secrets: RuntimeSecrets = Object.create(null);
+  for (const key of session.secretKeys) {
+    const value = await fetchRuntimeSecret(apiBaseUrl, session, key);
+    if (value === undefined) {
+      for (const loadedKey of Object.keys(secrets)) delete secrets[loadedKey];
+      return undefined;
+    }
+    secrets[key] = value;
+  }
+  return secrets;
+}
+
 function isRuntimeDeviceChallenge(value: unknown): value is RuntimeDeviceChallenge {
   if (!value || typeof value !== "object") return false;
   const response = value as Record<string, unknown>;

@@ -1,7 +1,8 @@
 import { and, eq, gt, lt } from "drizzle-orm";
 import { generateToken, hashToken, looksLikePasswayToken } from "../crypto/tokens.js";
-import { accessToken, auditLog, environment, runtimeDevice, runtimeSession, workspace } from "../db/auth-schema.js";
+import { accessToken, auditLog, environment, runtimeDevice, runtimeSession, user, workspace } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
+import { sendRuntimeNewIpEmail } from "../email/resend.js";
 import { auditValues } from "./audit.service.js";
 import { getRuntimeSecretKeys } from "./runtime-secret.service.js";
 import { authenticateRuntimeToken, touchRuntimeToken } from "./runtime-token.service.js";
@@ -33,6 +34,9 @@ export async function createRuntimeSession(
   const sessionToken = generateToken();
   const now = new Date();
   const secretKeys = await getRuntimeSecretKeys(token.environmentId);
+  const [knownIp] = ip === "unknown" ? [true] : await db.select({ id: auditLog.id }).from(auditLog)
+    .where(and(eq(auditLog.environmentId, token.environmentId), eq(auditLog.action, "RUNTIME_SESSION_CREATED"), eq(auditLog.ip, ip)))
+    .limit(1);
 
   const inserted = await db.transaction(async (tx) => {
     const [currentToken] = await tx.select({ status: accessToken.status, revoked: accessToken.revoked, expiresAt: accessToken.expiresAt })
@@ -67,6 +71,11 @@ export async function createRuntimeSession(
     return true;
   });
   if (!inserted) return undefined;
+  if (!knownIp && token.createdByUserId) {
+    void db.select({ email: user.email }).from(user).where(eq(user.id, token.createdByUserId)).limit(1)
+      .then(([owner]) => owner && sendRuntimeNewIpEmail(owner.email, token.environmentName, ip))
+      .catch(() => undefined);
+  }
   touchRuntimeToken(token.id);
   return { sessionId, sessionToken, secretKeys };
 }

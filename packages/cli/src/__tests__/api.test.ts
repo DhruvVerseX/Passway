@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createRuntimeSession, fetchRuntimeSecret, fetchRuntimeStatus } from "../api.js";
+import { createRuntimeSession, fetchRuntimeSecret, fetchRuntimeSecrets, fetchRuntimeStatus } from "../api.js";
 
 const token = `ps_live_${"a".repeat(43)}`;
 
@@ -49,6 +49,17 @@ describe("runtime sessions API", () => {
   it("does not treat a failed fetch as an empty secret", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
     await expect(fetchRuntimeSecret("https://api.passway.co.in", { sessionId: "sess_a", sessionToken: token, secretKeys: ["DB_URL"] }, "DB_URL")).resolves.toBeUndefined();
+  });
+
+  it("discards partial values when a later fetch fails", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ value: "private" })))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchRuntimeSecrets("https://api.passway.co.in", {
+      sessionId: "sess_a", sessionToken: token, secretKeys: ["FIRST", "SECOND"],
+    })).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

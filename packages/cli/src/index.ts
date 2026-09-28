@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
-import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeSecret, fetchRuntimeStatus, registerRuntimeDevice, type RuntimeSecrets } from "./api.js";
+import { createRuntimeDeviceProof, createRuntimeSession, fetchRuntimeSecrets, fetchRuntimeStatus, registerRuntimeDevice } from "./api.js";
 import {
   apiBaseUrl,
   detectLaunchCommand,
@@ -130,15 +130,10 @@ async function run() {
     return 1;
   }
 
-  const secrets: RuntimeSecrets = Object.create(null);
-  for (const key of session.session.secretKeys) {
-    const value = await fetchRuntimeSecret(baseUrl, session.session, key);
-    if (value === undefined) {
-      for (const loadedKey of Object.keys(secrets)) delete secrets[loadedKey];
-      printSecretFailure({ kind: "server" });
-      return 1;
-    }
-    secrets[key] = value;
+  const secrets = await fetchRuntimeSecrets(baseUrl, session.session);
+  if (!secrets) {
+    printSecretFailure({ kind: "server" });
+    return 1;
   }
 
   printRunReady(status.status, config.launchCommand);
@@ -148,7 +143,9 @@ async function run() {
   const redactions = secretValues(secrets);
   const childEnv = childEnvironment(process.env, secrets);
   for (const key of Object.keys(secrets)) delete secrets[key];
-  const socket = await connectRuntimeSessionSocket({
+  let socket: Awaited<ReturnType<typeof connectRuntimeSessionSocket>>;
+  try {
+    socket = await connectRuntimeSessionSocket({
     apiBaseUrl: baseUrl,
     sessionId: session.session.sessionId,
     sessionToken: session.session.sessionToken,
@@ -159,7 +156,13 @@ async function run() {
       child?.kill("SIGTERM");
       setTimeout(() => child?.kill("SIGKILL"), 5_000).unref();
     },
-  });
+    });
+  } catch {
+    for (const key of session.session.secretKeys) delete childEnv[key];
+    redactions.length = 0;
+    printSecretFailure({ kind: "network" });
+    return 1;
+  }
   if (revoked) {
     socket.close();
     return 1;
