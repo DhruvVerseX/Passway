@@ -99,7 +99,7 @@ npm install -g /tmp/passway-cli-0.1.0.tgz
 passway --help
 ```
 
-The build requires Bun; running the installed CLI requires Node.js. The installer
+The build requires Bun; running the installed CLI requires Node.js 20.12 or newer. The installer
 resolves the native OS keyring dependency for the destination machine. Linux
 runtime device registration requires an accessible Secret Service keyring.
 

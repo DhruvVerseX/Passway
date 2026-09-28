@@ -9,7 +9,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20.12.0"
   },
   "scripts": {
     "start": "PASSWAY_API_URL=http://localhost:4000 bun --cwd ../.. packages/cli/src/index.ts start",

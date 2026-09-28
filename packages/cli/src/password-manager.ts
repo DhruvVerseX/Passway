@@ -43,7 +43,7 @@ function summary(vault: Vault) {
   const audit = auditVault(vault);
   const issues = audit.weak + audit.reused + audit.old;
   box(
-    `${vault.name} vault  ·  ${vault.entries.length} credentials\n${issues ? `${issues} security findings` : "No security findings"}`,
+    `${vault.name} vault  ·  ${vault.entries.length} credential${vault.entries.length === 1 ? "" : "s"}\n${issues ? `${issues} security finding${issues === 1 ? "" : "s"}` : "No security findings"}`,
     "PASSWAY  /  UNLOCKED",
     { width: 48 },
   );
@@ -165,7 +165,7 @@ async function interactive(vault: Vault, master: string) {
   summary(vault);
   while (true) {
     const action = answer<string>(await select({ message: "What would you like to do?", options: [
-      { value: "browse", label: "Search vault", hint: `${vault.entries.length} credentials` },
+      { value: "browse", label: "Search vault", hint: `${vault.entries.length} credential${vault.entries.length === 1 ? "" : "s"}` },
       { value: "add", label: "Add credential" },
       { value: "generate", label: "Generate password" },
       { value: "audit", label: "Security audit" },
@@ -189,7 +189,7 @@ export async function runPasswordManager(command: string | undefined, args: stri
   try {
     if (!command || command === "unlock") {
       if (!vaultExists()) throw new VaultError("NOT_INITIALIZED");
-      return unlocked(interactive);
+      return await unlocked(interactive);
     }
     if (command === "init") {
       intro("✦ PASSWAY  /  NEW VAULT");
@@ -202,17 +202,17 @@ export async function runPasswordManager(command: string | undefined, args: stri
       return 0;
     }
     if (command === "lock") { clearClipboard(); log.success("Vault locked and clipboard cleared."); return 0; }
-    if (command === "add") return unlocked(addCredential);
-    if (command === "list") return unlocked((vault) => { listCredentials(vault.entries); return 0; });
+    if (command === "add") return await unlocked(addCredential);
+    if (command === "list") return await unlocked((vault) => { listCredentials(vault.entries); return 0; });
     if (command === "search") {
       const query = args.join(" ").trim().toLowerCase();
       if (!query) { log.error("Usage: passway search <query>"); return 1; }
-      return unlocked((vault) => { listCredentials(vault.entries.filter((entry) => `${entry.name} ${entry.username} ${entry.website} ${entry.category}`.toLowerCase().includes(query))); return 0; });
+      return await unlocked((vault) => { listCredentials(vault.entries.filter((entry) => `${entry.name} ${entry.username} ${entry.website} ${entry.category}`.toLowerCase().includes(query))); return 0; });
     }
     if (["show", "edit", "delete"].includes(command)) {
       const id = args[0];
       if (!id) { log.error(`Usage: passway ${command} <id>`); return 1; }
-      return unlocked(async (vault, master) => {
+      return await unlocked(async (vault, master) => {
         const entry = vault.entries.find((item) => item.id === id);
         if (!entry) { log.error("Credential not found."); return 1; }
         if (command === "show") await credentialDetail(vault, master, entry);
@@ -221,8 +221,8 @@ export async function runPasswordManager(command: string | undefined, args: stri
         return 0;
       });
     }
-    if (command === "generate") return generator();
-    if (command === "audit") return unlocked((vault) => { printAudit(vault); return 0; });
+    if (command === "generate") return await generator();
+    if (command === "audit") return await unlocked((vault) => { printAudit(vault); return 0; });
     if (command === "export") {
       const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
       const destination = path.resolve(`passway-vault-${stamp}.json`);
