@@ -91,6 +91,7 @@ export async function fetchRuntimeSecret(apiBaseUrl: string, session: RuntimeSes
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
     const response = await fetch(`${apiBaseUrl}/api/runtime/sessions/${encodeURIComponent(session.sessionId)}/secrets/${encodeURIComponent(key)}`, {
+      redirect: "error",
       headers: { authorization: `Bearer ${session.sessionToken}` },
       signal: controller.signal,
     });
@@ -134,6 +135,7 @@ export async function fetchRuntimeStatus(
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
     const response = await fetch(`${apiBaseUrl}/v1/runtime/status`, {
+      redirect: "error",
       headers: { authorization: `Bearer ${token}`, "x-passway-app-id": appId },
       signal: controller.signal,
     });
@@ -168,6 +170,7 @@ export async function createRuntimeSession(
   try {
     const response = await fetch(`${apiBaseUrl}/api/runtime/sessions`, {
       method: "POST",
+      redirect: "error",
       headers: {
         authorization: `Bearer ${token}`,
         "content-type": "application/json",
@@ -203,6 +206,7 @@ async function deviceRequest(
 ) {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: "POST",
+    redirect: "error",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -221,6 +225,7 @@ export async function registerRuntimeDevice(
   const challenge = await deviceRequest(apiBaseUrl, token, "/api/runtime/devices/registration-challenges", { publicKey: device.publicKey, label });
   const response = await fetch(`${apiBaseUrl}/api/runtime/devices/register`, {
     method: "POST",
+    redirect: "error",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({ challengeId: challenge.challengeId, signature: device.sign(challenge.challengeId, challenge.challenge) }),
   });

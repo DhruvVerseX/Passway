@@ -24,6 +24,7 @@ describe("runtime sessions API", () => {
       expect(url).not.toContain(token);
       expect(url).not.toContain(session.sessionToken);
       expect(fetchMock.mock.calls[0][1].headers.authorization).toBe(`Bearer ${session.sessionToken}`);
+      expect(fetchMock.mock.calls[0][1].redirect).toBe("error");
       expect(JSON.stringify([log.mock.calls, warn.mock.calls, error.mock.calls])).not.toContain(canary);
     } finally {
       log.mockRestore(); warn.mockRestore(); error.mockRestore();

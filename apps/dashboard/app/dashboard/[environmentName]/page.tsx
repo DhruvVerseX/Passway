@@ -820,7 +820,8 @@ export default function EnvironmentDashboard() {
                 </h2>
                 <p className="mt-1 text-xs text-white/35">
                   Only this vault's linked runtime can request these
-                  values.
+                  values. Values enter your app's memory at startup; protect
+                  the local token and app dependencies.
                 </p>
               </div>
               <div className="flex items-center gap-2">
