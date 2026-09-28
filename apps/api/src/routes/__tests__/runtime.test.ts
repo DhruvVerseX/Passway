@@ -47,6 +47,12 @@ vi.mock("../../runtime-websocket.js", () => ({
 vi.mock("../../middleware/require-auth.js", () => ({
   requireAuth: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
 }));
+vi.mock("../../middleware/runtime-auth.js", () => ({
+  requireRuntimeToken: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    req.runtimeToken = req.header("authorization")?.replace(/^Bearer /, "");
+    next();
+  },
+}));
 
 const token = `ps_live_${"a".repeat(43)}`;
 

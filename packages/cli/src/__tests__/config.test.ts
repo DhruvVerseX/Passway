@@ -96,6 +96,32 @@ describe("App linking", () => {
     await saveProjectConfig({ appId: "app-123", apiUrl: "file:///tmp/test" }, tempDir);
     expect(apiBaseUrl(tempDir)).toBe("https://api.passway.co.in");
   });
+
+  it("refuses plaintext HTTP for a remote API, including environment overrides", async () => {
+    await saveProjectConfig({ appId: "app-123", apiUrl: "http://api.example.com" }, tempDir);
+    expect(() => apiBaseUrl(tempDir)).toThrow("must use HTTPS");
+    const original = process.env.PASSWAY_API_URL;
+    process.env.PASSWAY_API_URL = "http://api.example.com";
+    try {
+      expect(() => apiBaseUrl(tempDir)).toThrow("must use HTTPS");
+    } finally {
+      if (original === undefined) delete process.env.PASSWAY_API_URL;
+      else process.env.PASSWAY_API_URL = original;
+    }
+  });
+
+  it("allows HTTP only for exact local hosts", () => {
+    const original = process.env.PASSWAY_API_URL;
+    try {
+      process.env.PASSWAY_API_URL = "http://127.0.0.1:4000";
+      expect(apiBaseUrl(tempDir)).toBe("http://127.0.0.1:4000");
+      process.env.PASSWAY_API_URL = "http://localhost.evil.example";
+      expect(() => apiBaseUrl(tempDir)).toThrow("must use HTTPS");
+    } finally {
+      if (original === undefined) delete process.env.PASSWAY_API_URL;
+      else process.env.PASSWAY_API_URL = original;
+    }
+  });
   it("reads the App ID from the current project's .passway.json", async () => {
     fs.writeFileSync(path.join(tempDir, ".passway.json"), JSON.stringify({ appId: "app-123", launchCommand: ["npm", "run", "dev"] }));
     await expect(findAppId(tempDir)).resolves.toBe("app-123");

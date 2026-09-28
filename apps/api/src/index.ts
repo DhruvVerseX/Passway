@@ -9,8 +9,15 @@ import { resourcesRouter } from "./routes/resources.js";
 import { runtimeRouter } from "./routes/runtime.js";
 import { attachRuntimeSessionWebSocket } from "./runtime-websocket.js";
 import { authClientIp } from "./middleware/auth-client-ip.js";
+import { secureTransport } from "./middleware/secure-transport.js";
 
 const app = express();
+if (process.env.NODE_ENV === "production") {
+  const trustedHops = Number(process.env.PASSWAY_TRUST_PROXY_HOPS ?? 0);
+  if (!Number.isInteger(trustedHops) || trustedHops < 0) throw new Error("Invalid PASSWAY_TRUST_PROXY_HOPS");
+  app.set("trust proxy", trustedHops);
+  app.use(secureTransport(new URL(process.env.BETTER_AUTH_URL ?? "").origin));
+}
 const allowedOrigins = getAllowedOrigins();
 
 app.use((req, res, next) => {

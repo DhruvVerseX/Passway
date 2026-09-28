@@ -52,7 +52,9 @@ async function verifyRuntime(appId: string, token: string) {
 }
 
 async function start(command?: string, args: string[] = []) {
-  const baseUrl = apiBaseUrl();
+  let baseUrl: string;
+  try { baseUrl = apiBaseUrl(); }
+  catch { printRuntimeWarning("Passway API URL must use HTTPS except on localhost or 127.0.0.1."); return 1; }
   const token = await findRuntimeToken();
   if (!token) {
     printMissingToken();
@@ -110,7 +112,9 @@ async function run() {
   }
   warnIfDotenvIsTrackable();
 
-  const baseUrl = apiBaseUrl();
+  let baseUrl: string;
+  try { baseUrl = apiBaseUrl(); }
+  catch { printRuntimeWarning("Passway API URL must use HTTPS except on localhost or 127.0.0.1."); return 1; }
   const status = await fetchRuntimeStatus(baseUrl, token, config.appId);
   if (status.kind !== "success") {
     printConnectionFailure(status);

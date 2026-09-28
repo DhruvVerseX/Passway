@@ -133,5 +133,10 @@ export function apiBaseUrl(cwd = process.cwd()) {
     // A missing project config falls back to the normal API default.
   }
   const local = fs.existsSync(path.join(cwd, "apps/api/package.json"));
-  return (process.env.PASSWAY_API_URL ?? projectApiUrl ?? (local ? "http://localhost:4000" : "https://api.passway.co.in")).replace(/\/$/, "");
+  const selected = process.env.PASSWAY_API_URL ?? projectApiUrl ?? (local ? "http://localhost:4000" : "https://api.passway.co.in");
+  const url = configuredApiUrl(selected);
+  if (!url || !(url.startsWith("https://") || (url.startsWith("http://") && ["localhost", "127.0.0.1"].includes(new URL(url).hostname)))) {
+    throw new Error("Passway API URL must use HTTPS except on localhost or 127.0.0.1.");
+  }
+  return url;
 }
