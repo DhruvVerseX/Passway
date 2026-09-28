@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ row: undefined as Record<string, unknown> | undefined, update: vi.fn() }));
+const mocks = vi.hoisted(() => ({ row: undefined as Record<string, unknown> | undefined, update: vi.fn(), transaction: vi.fn(), consumeChallenge: vi.fn() }));
 
 vi.mock("../../db/index.js", () => ({
   db: {
@@ -11,10 +11,15 @@ vi.mock("../../db/index.js", () => ({
       async limit() { return mocks.row ? [mocks.row] : []; },
     }),
     update: mocks.update,
+    transaction: mocks.transaction,
   },
 }));
 
-import { authenticateRuntimeSession } from "../runtime-session.service.js";
+vi.mock("../runtime-device.service.js", () => ({ consumeRuntimeDeviceSessionChallenge: mocks.consumeChallenge }));
+vi.mock("../runtime-secret.service.js", () => ({ getRuntimeSecretKeys: async () => ["DB_URL"] }));
+vi.mock("../runtime-token.service.js", () => ({ touchRuntimeToken: vi.fn() }));
+
+import { authenticateRuntimeSession, createRuntimeSession, RuntimeSessionLimitError } from "../runtime-session.service.js";
 
 const sessionToken = `ps_live_${"a".repeat(43)}`;
 const active = () => ({
@@ -30,7 +35,7 @@ const active = () => ({
   runtimeEnabled: true,
 });
 
-afterEach(() => { mocks.row = undefined; mocks.update.mockReset(); });
+afterEach(() => { mocks.row = undefined; mocks.update.mockReset(); mocks.transaction.mockReset(); mocks.consumeChallenge.mockReset(); });
 
 describe("runtime session authorization", () => {
   it("accepts an active session", async () => {
@@ -58,5 +63,29 @@ describe("runtime session authorization", () => {
     mocks.update.mockReturnValue({ set: () => ({ where: async () => undefined }) });
     await expect(authenticateRuntimeSession("sess_a", sessionToken)).resolves.toBeUndefined();
     expect(mocks.update).toHaveBeenCalled();
+  });
+
+  it("rejects a fourth concurrent session for one token", async () => {
+    mocks.consumeChallenge.mockResolvedValue({
+      deviceId: "dev_a",
+      token: { id: "tok_a", environmentId: "env_a", projectId: "project_a", workspaceId: "workspace_a", environmentStatus: "hosted", runtimeEnabled: true, createdByUserId: "user_a" },
+    });
+    mocks.transaction.mockImplementation(async (work) => {
+      let selects = 0;
+      const tx = {
+        select: () => {
+          selects += 1;
+          return {
+            from() { return this; }, where() { return this; },
+            for() { return [{ status: "active", revoked: false, expiresAt: new Date(Date.now() + 60_000) }]; },
+            limit() { return Array.from({ length: 3 }, (_, i) => ({ sessionId: `sess_${i}` })); },
+          };
+        },
+      };
+      await work(tx);
+      expect(selects).toBe(2);
+    });
+    await expect(createRuntimeSession("env_a", sessionToken, "127.0.0.1", { challengeId: "dch_a", signature: "proof" }))
+      .rejects.toBeInstanceOf(RuntimeSessionLimitError);
   });
 });

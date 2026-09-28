@@ -34,6 +34,7 @@ export async function createRuntimeSession(
   const sessionToken = generateToken();
   const now = new Date();
   const secretKeys = await getRuntimeSecretKeys(token.environmentId);
+  if (secretKeys.length === 0) return undefined;
   const [knownIp] = ip === "unknown" ? [true] : await db.select({ id: auditLog.id }).from(auditLog)
     .where(and(eq(auditLog.environmentId, token.environmentId), eq(auditLog.action, "RUNTIME_SESSION_CREATED"), eq(auditLog.ip, ip)))
     .limit(1);

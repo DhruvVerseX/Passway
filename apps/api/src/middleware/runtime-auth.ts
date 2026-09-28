@@ -25,6 +25,7 @@ declare global {
 }
 
 export function requireRuntimeToken(req: Request, res: Response, next: NextFunction) {
+  res.set("Cache-Control", "no-store");
   const [scheme, token, extra] = (req.header("authorization") ?? "").split(" ");
   // ponytail: per-process limiter; replace with Redis when running more than one API instance.
   if (!allow(`ip:${req.ip ?? "unknown"}`)) {

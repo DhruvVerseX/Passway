@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { printConnectionFailure, printInvalidToken, printSuccess } from "../output.js";
+import { printConnectionFailure, printInvalidToken, printRuntimeProcessError, printSuccess } from "../output.js";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -40,5 +40,11 @@ describe("safe CLI output", () => {
     expect(invalid).not.toContain("length");
     expect(invalid).not.toContain("ps_live_");
     expect(unhealthy).toContain("Your secrets were not exposed.");
+  });
+
+  it("redacts a fetched value from child startup errors", () => {
+    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    printRuntimeProcessError(new Error("failed with private-value"), ["private-value"]);
+    expect(write.mock.calls.flat().join("")).not.toContain("private-value");
   });
 });

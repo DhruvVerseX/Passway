@@ -147,6 +147,8 @@ describe("runtime sessions", () => {
   });
 
   it("rechecks the session before each secret fetch", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mocks.authenticateRuntimeSession.mockResolvedValueOnce({ environmentId: "env-a" }).mockResolvedValueOnce(undefined);
     mocks.getRuntimeSecret.mockResolvedValue("postgres://private");
     const first = await fetchSecret();
@@ -157,5 +159,9 @@ describe("runtime sessions", () => {
     expect(revoked.status).toBe(401);
     expect(mocks.getRuntimeSecret).toHaveBeenCalledTimes(1);
     expect(mocks.authenticateRuntimeSession).toHaveBeenCalledWith("sess_a", token);
+    expect(log).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    log.mockRestore();
+    error.mockRestore();
   });
 });
