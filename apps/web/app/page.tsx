@@ -187,7 +187,7 @@ export default function PasswayLanding() {
             ["Product", "#product"],
             ["How it works", "#how-it-works"],
             ["Security", "#security"],
-            ["Documentation", "localhost:3000"],
+            ["Documentation", "/docs"],
           ].map(([label, href]) => (
             <a key={label} href={href} onClick={() => setMenuOpen(false)} className="flex items-center justify-between border-b border-white/[0.07] py-5 text-lg font-medium text-white/80">
               {label} <ChevronRight size={18} className="text-white/25" />
@@ -220,7 +220,7 @@ export default function PasswayLanding() {
                 Secure your first secret
                 <ArrowRight size={15} strokeWidth={2.4} className="transition-transform group-hover:translate-x-0.5" />
               </a>
-              <a href="http://localhost:3000/docs" className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.025] px-5 text-sm font-medium text-white/70 transition hover:bg-white/[0.05] hover:text-white sm:w-auto">
+              <a href="/docs" className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.025] px-5 text-sm font-medium text-white/70 transition hover:bg-white/[0.05] hover:text-white sm:w-auto">
                 <Code2 size={15} /> Read the docs
               </a>
             </div>

@@ -103,7 +103,7 @@ function packageManager(cwd: string) {
 }
 
 function safeScript(script: unknown) {
-  return typeof script === "string" && !/\bpassway\s+(?:start|run)\b/.test(script);
+  return typeof script === "string" && !/\bpassway(?:\s|$)/.test(script);
 }
 
 export async function detectLaunchCommand(cwd = process.cwd()) {

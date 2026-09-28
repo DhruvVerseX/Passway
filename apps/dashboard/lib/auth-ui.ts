@@ -7,7 +7,7 @@ export function apiBaseURL() {
 }
 
 export function webBaseURL() {
-  return process.env.NEXT_PUBLIC_MARKETING_URL ?? "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_MARKETING_URL ?? "http://localhost:3003";
 }
 
 export function dashboardBaseURL() {

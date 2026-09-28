@@ -155,8 +155,8 @@ describe("launch command detection", () => {
     await expect(detectLaunchCommand(tempDir)).resolves.toEqual(["bun", "run", "dev"]);
   });
 
-  it("does not select recursive passway scripts", async () => {
-    fs.writeFileSync(path.join(tempDir, "package.json"), JSON.stringify({ scripts: { dev: "passway run", start: "node server.js" } }));
+  it.each(["passway", "passway run"])("does not select recursive %s scripts", async (script) => {
+    fs.writeFileSync(path.join(tempDir, "package.json"), JSON.stringify({ scripts: { dev: script, start: "node server.js" } }));
 
     await expect(detectLaunchCommand(tempDir)).resolves.toEqual(["npm", "run", "start"]);
   });

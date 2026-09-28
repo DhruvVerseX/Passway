@@ -14,6 +14,7 @@ import {
 import {
   printConnectionFailure,
   printInvalidToken,
+  printInvalidApiUrl,
   printMissingApp,
   printMissingCommand,
   printMissingToken,
@@ -21,6 +22,8 @@ import {
   printRuntimeWarning,
   printRuntimeProcessError,
   printRunReady,
+  printRuntimeIntro,
+  printRuntimeStep,
   printSecretFailure,
   printSetupSuccess,
 } from "./output.js";
@@ -52,12 +55,13 @@ async function verifyRuntime(appId: string, token: string) {
 }
 
 async function start(command?: string, args: string[] = []) {
+  printRuntimeIntro("START");
   let baseUrl: string;
   try { baseUrl = apiBaseUrl(); }
-  catch { printRuntimeWarning("Passway API URL must use HTTPS except on localhost or 127.0.0.1."); return 1; }
+  catch { printInvalidApiUrl(); return 1; }
   const token = await findRuntimeToken();
   if (!token) {
-    printMissingToken();
+    printMissingToken("start");
     return 1;
   }
   if (!hasValidLocalTokenFormat(token)) {
@@ -76,8 +80,10 @@ async function start(command?: string, args: string[] = []) {
     return 1;
   }
 
+  printRuntimeStep("Checking hosted vault");
   const runtime = await verifyRuntime(appId, token);
   if (!runtime) return 1;
+  printRuntimeStep("Registering this device");
   try {
     const device = await getOrCreateRuntimeDeviceKey(baseUrl, appId);
     await registerRuntimeDevice(baseUrl, token, device, deviceLabel());
@@ -92,6 +98,7 @@ async function start(command?: string, args: string[] = []) {
 }
 
 async function run() {
+  printRuntimeIntro("RUN");
   const config = await readProjectConfig();
   if (!config?.appId) {
     printMissingApp();
@@ -103,7 +110,7 @@ async function run() {
   }
   const token = await findRuntimeToken(process.cwd(), { includeProcessEnv: false });
   if (!token) {
-    printMissingToken();
+    printMissingToken("run");
     return 1;
   }
   if (!hasValidLocalTokenFormat(token)) {
@@ -114,13 +121,15 @@ async function run() {
 
   let baseUrl: string;
   try { baseUrl = apiBaseUrl(); }
-  catch { printRuntimeWarning("Passway API URL must use HTTPS except on localhost or 127.0.0.1."); return 1; }
+  catch { printInvalidApiUrl(); return 1; }
+  printRuntimeStep("Checking hosted vault");
   const status = await fetchRuntimeStatus(baseUrl, token, config.appId);
   if (status.kind !== "success") {
     printConnectionFailure(status);
     return 1;
   }
   let proof: { challengeId: string; signature: string };
+  printRuntimeStep("Authorizing this device");
   try {
     const device = await getOrCreateRuntimeDeviceKey(baseUrl, config.appId);
     proof = await createRuntimeDeviceProof(baseUrl, token, device);
@@ -134,13 +143,13 @@ async function run() {
     return 1;
   }
 
+  printRuntimeStep("Loading secrets");
   const secrets = await fetchRuntimeSecrets(baseUrl, session.session);
   if (!secrets) {
     printSecretFailure({ kind: "server" });
     return 1;
   }
 
-  printRunReady(status.status, config.launchCommand);
   const [command, ...args] = config.launchCommand;
   let child: ChildProcess | undefined;
   let revoked = false;
@@ -148,6 +157,7 @@ async function run() {
   const childEnv = childEnvironment(process.env, secrets);
   for (const key of Object.keys(secrets)) delete secrets[key];
   let socket: Awaited<ReturnType<typeof connectRuntimeSessionSocket>>;
+  printRuntimeStep("Opening live session");
   try {
     socket = await connectRuntimeSessionSocket({
     apiBaseUrl: baseUrl,
@@ -172,6 +182,7 @@ async function run() {
     return 1;
   }
 
+  printRunReady(status.status, config.launchCommand);
   child = spawn(executableForPlatform(command), args, {
     cwd: process.cwd(),
     env: childEnv,
@@ -206,6 +217,14 @@ if (["--help", "-h", "help"].includes(process.argv[2] ?? "")) {
   );
 } else if (process.argv[2] === "run") {
   process.exitCode = await run();
+} else if (!process.argv[2] && existsSync(".passway.json")) {
+  const config = await readProjectConfig();
+  if (!config) {
+    printMissingApp();
+    process.exitCode = 1;
+  } else {
+    process.exitCode = config.launchCommand ? await run() : await start();
+  }
 } else {
   process.exitCode = await runPasswordManager(
     process.argv[2],

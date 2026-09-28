@@ -7,11 +7,6 @@ import {
   vaultExists, vaultPath,
 } from "./vault.js";
 
-const commands = [
-  "init", "unlock", "lock", "add", "list", "search <query>", "show <id>", "edit <id>",
-  "delete <id>", "generate", "audit", "import <file>", "export", "config", "start", "run",
-];
-
 class PromptCancelled extends Error {}
 
 function answer<T>(value: T | symbol): T {
@@ -181,8 +176,9 @@ async function interactive(vault: Vault, master: string) {
 
 export function printPasswordManagerHelp() {
   intro("✦ PASSWAY  /  COMMANDS");
-  note(commands.map((command) => `passway ${command}`).join("\n"), "Local vault + runtime");
-  outro("Run passway to open your vault");
+  note("passway                 Run the linked project\npassway start           Link and verify its vault\npassway run             Launch the saved command\npassway start -- CMD    Save an explicit command", "HOSTED PROJECT");
+  note("passway unlock          Open local password manager\npassway init            Create a local vault\npassway add             Add a credential\npassway list            List credentials\npassway search <query>   Find credentials\npassway show <id>        View a credential\npassway edit <id>        Edit a credential\npassway delete <id>      Delete a credential\npassway generate         Create a password\npassway audit            Check vault security\npassway import <file>    Restore encrypted backup\npassway export           Save encrypted backup\npassway config           Show local settings\npassway lock             Clear clipboard", "LOCAL VAULT");
+  outro("Use passway unlock for the local vault");
 }
 
 export async function runPasswordManager(command: string | undefined, args: string[]) {

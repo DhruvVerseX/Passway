@@ -118,8 +118,9 @@ vault/environment `appId`. Sessions are created by the CLI automatically.
 To persist a local API address across terminals, add `"apiUrl":
 "http://localhost:4000"` to `.passway.json`. Successful `passway start` saves the
 API address alongside the launch command. `PASSWAY_API_URL` takes priority when
-explicitly set. Bare `passway` and `passway init` open/create the separate local
-password manager; they do not connect to a hosted runtime vault.
+explicitly set. Bare `passway` runs a linked project's saved command with hosted
+secrets, or sets it up if no command has been saved. Use `passway unlock` to open
+the separate local password manager; `passway init` creates it.
 Outside the Passway repository, the CLI defaults to the production API unless
 `PASSWAY_API_URL` is set. After the package is published to npm, users can install
 it with `npm install -g @passway/cli`.
