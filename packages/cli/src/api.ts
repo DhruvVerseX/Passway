@@ -80,7 +80,7 @@ function isRuntimeSession(value: unknown): value is RuntimeSession {
     typeof response.sessionId === "string" &&
     response.sessionId.startsWith("sess_") &&
     typeof response.sessionToken === "string" &&
-    Array.isArray(response.secretKeys) &&
+    Array.isArray(response.secretKeys) && response.secretKeys.length > 0 &&
     response.secretKeys.every((key) => typeof key === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) &&
     new Set(response.secretKeys).size === response.secretKeys.length
   );

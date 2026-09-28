@@ -51,6 +51,14 @@ describe("runtime sessions API", () => {
     await expect(fetchRuntimeSecret("https://api.passway.co.in", { sessionId: "sess_a", sessionToken: token, secretKeys: ["DB_URL"] }, "DB_URL")).resolves.toBeUndefined();
   });
 
+  it("rejects a session with no secret names", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      sessionId: "sess_a", sessionToken: token, secretKeys: [],
+    }), { status: 201 })));
+    await expect(createRuntimeSession("https://api.passway.co.in", token, "env_a", { challengeId: "dch_a", signature: "a".repeat(86) }))
+      .resolves.toEqual({ kind: "server" });
+  });
+
   it("discards partial values when a later fetch fails", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ value: "private" })))
