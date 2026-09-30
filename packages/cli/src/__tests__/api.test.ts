@@ -73,6 +73,13 @@ describe("runtime sessions API", () => {
     await expect(fetchRuntimeSecret("https://api.passway.co.in", { sessionId: "sess_a", sessionToken: token, secretKeys: ["DB_URL"] }, "DB_URL")).resolves.toBeUndefined();
   });
 
+  it("reports a secret-delivery HTTP failure without exposing response values", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("private response", { status: 503 })));
+    const failure = vi.fn();
+    await expect(fetchRuntimeSecrets("https://api.passway.co.in", { sessionId: "sess_a", sessionToken: token, secretKeys: ["DB_URL"] }, failure)).resolves.toBeUndefined();
+    expect(failure).toHaveBeenCalledWith({ kind: "server", httpStatus: 503 });
+  });
+
   it("rejects a session with no secret names", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       sessionId: "sess_a", sessionToken: token, secretKeys: [],

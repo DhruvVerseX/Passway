@@ -25,6 +25,7 @@ export type StatusResult =
         | "server"
         | "network"
         | "timeout";
+      httpStatus?: number;
     };
 
 export type RuntimeSecrets = Record<string, string>;
@@ -86,7 +87,7 @@ function isRuntimeSession(value: unknown): value is RuntimeSession {
   );
 }
 
-export async function fetchRuntimeSecret(apiBaseUrl: string, session: RuntimeSession, key: string) {
+export async function fetchRuntimeSecret(apiBaseUrl: string, session: RuntimeSession, key: string, onFailure?: (failure: Exclude<StatusResult, { kind: "success" }>) => void) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -95,22 +96,26 @@ export async function fetchRuntimeSecret(apiBaseUrl: string, session: RuntimeSes
       headers: { authorization: `Bearer ${session.sessionToken}` },
       signal: controller.signal,
     });
-    if (!response.ok) return undefined;
+    if (!response.ok) {
+      onFailure?.({ kind: response.status === 401 || response.status === 403 ? "auth" : response.status === 429 ? "rate_limit" : "server", httpStatus: response.status });
+      return undefined;
+    }
     const body: unknown = await response.json();
-    return body && typeof body === "object" && typeof (body as { value?: unknown }).value === "string"
-      ? (body as { value: string }).value
-      : undefined;
-  } catch {
+    if (body && typeof body === "object" && typeof (body as { value?: unknown }).value === "string") return (body as { value: string }).value;
+    onFailure?.({ kind: "server", httpStatus: response.status });
+    return undefined;
+  } catch (error) {
+    onFailure?.({ kind: error instanceof Error && error.name === "AbortError" ? "timeout" : "network" });
     return undefined;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-export async function fetchRuntimeSecrets(apiBaseUrl: string, session: RuntimeSession): Promise<RuntimeSecrets | undefined> {
+export async function fetchRuntimeSecrets(apiBaseUrl: string, session: RuntimeSession, onFailure?: (failure: Exclude<StatusResult, { kind: "success" }>) => void): Promise<RuntimeSecrets | undefined> {
   const secrets: RuntimeSecrets = Object.create(null);
   for (const key of session.secretKeys) {
-    const value = await fetchRuntimeSecret(apiBaseUrl, session, key);
+    const value = await fetchRuntimeSecret(apiBaseUrl, session, key, onFailure);
     if (value === undefined) {
       for (const loadedKey of Object.keys(secrets)) delete secrets[loadedKey];
       return undefined;

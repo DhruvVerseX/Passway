@@ -75,6 +75,9 @@ function failure(result: Failure, loadingSecrets: boolean) {
     case "timeout":
       problem("The vault did not respond in time", "Check your connection and try again.");
       break;
+    case "server":
+      problem("Passway API could not deliver the secrets", result.httpStatus ? `Secret request returned HTTP ${result.httpStatus}. Check the Passway API.` : "Check the Passway API for a session or secret-delivery error.");
+      break;
     default:
       problem(loadingSecrets ? "Passway could not securely load the vault" : "Unable to reach Passway", "Check your connection and try again.");
   }
@@ -86,6 +89,10 @@ export function printConnectionFailure(result: Failure) {
 
 export function printSecretFailure(result: Failure) {
   failure(result, true);
+}
+
+export function printRuntimeSocketFailure() {
+  problem("Unable to open the live runtime session", "Run the Passway CLI with Node.js and check the API's WebSocket connection.");
 }
 
 function runtimeCard(status: RuntimeStatus) {

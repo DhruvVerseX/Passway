@@ -25,6 +25,7 @@ import {
   printRuntimeIntro,
   printRuntimeStep,
   printSecretFailure,
+  printRuntimeSocketFailure,
   printSetupSuccess,
 } from "./output.js";
 import { runPasswordManager } from "./password-manager.js";
@@ -156,9 +157,8 @@ async function run() {
   }
 
   printRuntimeStep("Loading secrets");
-  const secrets = await fetchRuntimeSecrets(baseUrl, session.session);
+  const secrets = await fetchRuntimeSecrets(baseUrl, session.session, printSecretFailure);
   if (!secrets) {
-    printSecretFailure({ kind: "server" });
     return 1;
   }
 
@@ -185,7 +185,7 @@ async function run() {
   } catch {
     for (const key of session.session.secretKeys) delete childEnv[key];
     redactions.length = 0;
-    printSecretFailure({ kind: "network" });
+    printRuntimeSocketFailure();
     return 1;
   }
   if (revoked) {
